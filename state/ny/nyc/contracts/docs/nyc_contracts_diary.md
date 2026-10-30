@@ -500,3 +500,50 @@ if (require(duckr)) {
   duckr::duck_upload(clean_path, s3_url)
 }
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-14 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
+script is [`code/nyc_contracts.R`](../code/nyc_contracts.R); the steps above are unchanged except as noted here.
+Output: `nyc_contracts_2003-2026.csv`, 53,884 rows, the same 28 columns in the same order as `nyc_contracts_clean.csv`._
+
+The source is the same City Record dataset, [Recent Contract Awards (`qyyg-4tf5`)](https://data.cityofnewyork.us/City-Government/Recent-Contract-Awards/qyyg-4tf5), exported 2026-10-14
+(53,884 rows, 37 columns, UTF-8). Despite its name it is cumulative: start dates run from 2003-01-02 to 2026-10-14,
+and every row is an award notice. It replaces the 2020 file (35,089 rows, 2003 to May 2020). Rows by year: 2003-2019
+34,112 (34,149 before), 2020 2,085 (940 before), then 2,310, 3,137, 3,199, 3,186, 2,980 and 2,875 for 2021-2026.
+
+Changes to the recipe:
+
+1. **Column types use the cleaned names** (`start_date`, not `StartDate`), because current `vroom` matches
+   `col_types` after name repair, and `col_date_mdy()` replaces the deprecated `col_date_usa()`. campfin 1.0.11 from
+   CRAN.
+2. **Fixed layout.** `remove_empty("cols")` made the columns depend on the data, and the dataset's mapping is by
+   position, so the output is pinned to the 2020 file's 28 columns, in order. Columns only in the new export are
+   dropped: `email` (an agency contact, filled on 6,231 rows), `additional_desctription2` (3 rows) and 13 empty ones
+   (`due_date`, `contact_fax`, `additional_description3`, `other_info2`/`3`, `printout3`, the `event_*` fields).
+3. Otherwise the same steps: the address is split into `addr`/`state`/`zip`, `agency_state` is "NY", `na_flag`
+   (1,430 rows), a duplicate check (none) and `year` from `start_date`.
+
+**The city now publishes less of the vendor address.** For many notices the export has only the street ("1411
+Broadway"), sometimes a different one, with no city, state or ZIP: a state is found on 91% of the 2020 file's rows
+but on 55% of the new export, and on 3% of 2025-2026 notices. So that no address we had is lost, the 33,618 notices
+that were in the 2020 file keep that file's address fields (`vendor_address`, `addr`, `state`, `zip`), the address
+as first published: 5,758 of them regain a state, and 16,845 differ from today's text. Overall, state is filled on
+65% of rows and ZIP on 68%. Newer notices have what the city publishes.
+
+``` r
+old <- read_csv(old_path, col_types = cols(.default = col_character()), na = "") %>%   # nyc_contracts_clean.csv
+  select(request_id, o_vendor_address = vendor_address, o_addr = addr, o_state = state, o_zip = zip) %>%
+  filter(!is.na(o_vendor_address))
+nyc <- left_join(nyc, old, by = "request_id")
+keep_old <- !is.na(nyc$o_vendor_address)
+nyc <- mutate(nyc,
+  vendor_address = if_else(keep_old, o_vendor_address, vendor_address), addr = if_else(keep_old, o_addr, addr),
+  state = if_else(keep_old, o_state, state), zip = if_else(keep_old, o_zip, zip)) %>%
+  select(-starts_with("o_"))
+```
+
+Other changes at the source are taken as published: vendor names re-cased (7,100 rows), agency names ("Dept. of
+..."), contact phones now filled (66%) and added descriptions. 44 notices in the 2020 file are no longer in the
+source (2005-2020, mostly 2017-2019): 32 were re-published under a new request ID with the same PIN and vendor
+(corrections, so the newer copy is the one kept) and 12 were withdrawn.

@@ -411,3 +411,44 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-14 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
+script is [`code/wa_contracts.R`](../code/wa_contracts.R); the steps above are unchanged except as noted here.
+Output: `wa_contracts_2015-2026.csv`, 245,831 rows, the same 17 columns in the same order._
+
+The source is the same Washington OpenData export ([`n8q6-4twj`](https://data.wa.gov/Procurements-and-Contracts/Master-Contract-Sales-Data-by-Customer-Contract-Ve/n8q6-4twj), now titled "Statewide Contract (Master
+Contract) Sales Data by Customer, Contract, Vendor"), downloaded 2026-10-14 (portal updated 2026-04-24): 245,831 rows,
+14 columns, calendar years 2015-2026 (2026 is partial). It is the full history, so this is a **full replacement** of
+`wa_contracts.csv` (172,773 rows, 2015 to part of 2022), not an append. Changes:
+
+1. **No "Update" step.** The 2022 step above (keep 2021 onward, re-take 2020, then bind) is not needed.
+2. **Read** from the downloaded file rather than the URL; the column types are set on the cleaned names.
+3. Columns 12-14 (`vet_owned`, `small_business`, `diverse_options`) become logical with `across()`, since
+   `mutate_at(..., equals, "Y")` needs magrittr; a blank `omwbe` becomes `"N"`, as before.
+4. `amount` is the sum of the four quarterly sales (no quarter is blank).
+5. **Amendments.** The source has no amendment or superseded flag; nothing is dropped.
+
+`na_flag` (blank customer name) marks 12,315 rows and `dupe_flag` 8. For 2015-2021 the rows and amounts per year are
+within 0.2% of the old file, and rows that match on customer, contract, vendor and year have identical amounts. 2022
+grows from 18,602 to 20,478 rows (the old file had only part of 2022); new years: 2023 20,545 rows ($2.77 billion),
+2024 21,699 ($3.31 billion), 2025 21,439 ($3.24 billion), 2026 7,525 so far ($0.40 billion).
+
+**The state now shows current names on past years.** About 3,900 old rows (2015-2021) no longer match by key, nearly
+all because the export shows the vendor's or customer's *current* name: 2,840 vendor renames (for example BUD CLARY
+AUTO DEALERSHIPS is now BUD CLARY CHEVROLET INC on 964 rows, and MAGNA5, LLC is RINGSQUARED TELECOM LLC on 327) and
+858 customer-name fixes (GR HARBOR COLLEGE is GRAYS HARBOR COLLEGE). As decided for this update, we use what the state
+publishes, so the old names for those years are no longer in the data.
+
+``` r
+wac <- read_csv("raw_n8q6-4twj.csv", name_repair = make_clean_names,
+                col_types = cols(.default = col_character(), calendar_year = col_integer(),
+                                 q1_sales_reported = col_double(), q2_sales_reported = col_double(),
+                                 q3_sales_reported = col_double(), q4_sales_reported = col_double()))
+wac <- mutate(wac, across(12:14, ~ .x == "Y"))
+wac$omwbe[is.na(wac$omwbe)] <- "N"
+wac <- flag_na(wac, customer_name, vendor_name)
+wac <- flag_dupes(wac, everything())
+wac <- mutate(wac, amount = q1_sales_reported + q2_sales_reported + q3_sales_reported + q4_sales_reported)
+```

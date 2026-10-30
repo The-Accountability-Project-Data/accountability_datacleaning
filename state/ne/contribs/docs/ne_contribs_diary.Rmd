@@ -966,3 +966,45 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-28 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-29.
+The runnable scripts are [`state/ne/code/ne_contribs.R`](../../code/ne_contribs.R) (with
+`ne_common.R`). Output: 373,696 rows, 41 columns, written as `ne_contribs_1985-2026.csv` and uploaded as
+`ne_contribs_1984-2026.csv`, renamed for the earliest year it actually holds._
+
+The legacy bulk file `https://www.nebraska.gov/nadc_data/nadc_data.zip` is frozen ("Data last loaded: 2022-07-11");
+its newest filings were received in 2021 and it differs from the 2022-03-29 copy used above by about 3 rows. Since
+2022 the NADC publishes filings from its e-filing system (Civix "FirstTuesday" PublicSite) as yearly extracts on the
+[Data Download page][dd26]: `<year>_ContributionLoanExtract.csv.zip` for 2021-2026. Each file holds one **filing**
+year and stops changing at the end of that year; later changes appear as "Offset due to update/delete of filed item"
+rows. Those extracts were processed separately in `ne_contribs_diary_after_2021.Rmd` (unpublished dataset 476).
+
+[dd26]: https://nadc-e.nebraska.gov/PublicSite/DataDownload.aspx
+
+The update puts both eras in one file:
+
+1. **Old era** = the published 2022 output of this diary (`ne_contribs_19840101-20220329.csv`), values unchanged.
+   Its 26 columns come first, same names, same order.
+2. **New era** = all six yearly extracts 2021-2026, processed as in `ne_contribs_diary_after_2021.Rmd` (na_flag on
+   receipt date, filer name, amount and contributor last name; dupe_flag over all source columns; year from the
+   receipt date; campfin address/zip/city normalization), with these changes: read as **windows-1252** (the files
+   are not UTF-8; reading them as UTF-8 put U+FFFD characters in the 2023 output); a simple reader replaces the
+   stray-quote regex (every field is quoted but inner quotes are not escaped, e.g. `7441 "O" STREET, SUITE 203`, so
+   records are split on `","` after re-joining CRLF line breaks inside values with a space); dates written
+   YYYY-MM-DD.
+3. **Shared columns:** `committee_id` <- Org ID (the systems number committees differently, so a committee's IDs
+   change at the 2021 boundary), `committee_name` <- Filer Name, `committee_type` <- Filer Type, `date_received` <-
+   Filed Date, `contribution_date`, `contribution_amount`, `contributor_name` <- "first middle last suffix" built from
+   the split name fields (the same order as the old names), `contributor_address` <- Address 1,
+   `contributor_city/state/zipcode`, `contribution_year`, `na_flag`, `dupe_flag`, `address_clean`, `city_clean`,
+   `zip_clean`. New-only fields follow (`receipt_id, candidate_name, receipt_type, other_funds_type, description,
+   contributor_type, contributor_last_name, contributor_first_name, contributor_middle_name, contributor_suffix,
+   contributor_address_2, amended, employer, occupation`), blank for the old era, then `source_file`
+   (`nadc_data.zip` or the extract's name).
+4. **2021 overlap.** Some 2021 reports are in both systems. An old row is dropped (the new copy kept) when it was
+   received in 2021, has the same transaction date, amount and committee name (letters and digits only), and the new
+   contributor last/organization name occurs in the old name; one-to-one. 167 old rows dropped (31 matched the 2021
+   extract, 136 the 2022 extract); 4,415 of the 4,546 old rows dated 2021 have no new-system copy and are kept.
+5. **Superseded records:** offset rows and `Amended = "Y"` rows are kept as published; 0 rows dropped as superseded.

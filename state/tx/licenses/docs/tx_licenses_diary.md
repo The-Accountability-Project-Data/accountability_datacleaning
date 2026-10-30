@@ -810,3 +810,60 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+Rebuilt on 2026-10-28 as a new dataset, "Texas Licenses 2026" (the 2022 file, dataset 449, is left as it was: the
+source lists only current licenses, so replacing it would drop every license that has lapsed since). The script that
+ran is [`code/tx_licenses.R`](../code/tx_licenses.R). Output: `tx_licenses_2025-2029.csv`, 1,010,756 rows, the same 28
+columns in the same order as `tx_licenses_2018-20220516.csv`.
+
+Source: same URL, `https://www.tdlr.texas.gov/dbproduction2/ltlicfile.csv` (190 MB, Last-Modified 2026-10-28,
+pure ASCII). What changed and how the steps above were adjusted:
+
+1. **The file now has a header row and 23 columns:** the 19 listed in `lrformat.txt` plus four TDLR flag columns
+   (`Same Address or not`, `Business Address that mentions BOX`, `Mailing address that mentions BOX`,
+   `Phone-same or not`). The flags are dropped (decision, 2026-10-28). The 2022 mystery 20th column is gone, so the
+   `UNKOWN DATE` / `fix.csv` workaround is removed and `unkown_date` is written blank to keep the layout.
+2. **279 Boiler Inspectors rows have a 24th field** after the 19th. Their first 19 fields line up, so reading the
+   header's columns and keeping 1-19 is safe (readr drops the extra field and reports 279 problems).
+3. Expiration dates have a leading space (` 10/12/2027`); `trim_ws` handles it.
+4. **Year:** still the expiration year, but blank for the `01/01/1900` placeholder (652 Elevator Responsible Party
+   rows; decision, 2026-10-28). 6 TDLR regional-office Boiler Authorized Inspection Agency rows expire `12/31/2099`
+   and keep 2099; the file name uses 2025-2029.
+5. Rows with a blank `LICENSE TYPE` (49,795) are kept as published. Note 31,135 of them are exact copies of a
+   `Class A Barber` row (same number, name, subtype `BA`) apart from the blank type.
+6. `mutate(across(address_norm, na_if, ""))` becomes `across(address_norm, ~na_if(.x, ""))` (dplyr >= 1.1).
+7. The city refine is applied per row and checked against `zipcodes` directly instead of
+   `left_join(txl, good_refine)` on every column, which can duplicate rows; the rule is the same.
+8. `raw_dir` above points at `state/ct/...` (typo); the rebuild used its own work directory.
+
+``` r
+txl <- read_delim(
+  raw_csv, delim = ",", skip = 1,
+  escape_backslash = FALSE, escape_double = FALSE,
+  col_names = paste0("X", 1:24), # readr keeps the header's 23; the 24th field of 279 rows is dropped
+  col_types = cols(.default = col_character()),
+  trim_ws = TRUE
+)
+txl <- txl %>%
+  select(1:19) %>%
+  setNames(c(
+    "license_type", "license_number", "license_expiration_date", "county", "name",
+    "mailing_address_line1", "mailing_address_line2", "mailing_address_city_state_zip", "phone_number",
+    "business_name", "business_address_line1", "business_address_line2", "business_city_state_zip",
+    "business_county_code", "business_county", "business_zip", "business_phone", "license_subtype",
+    "continuing_education_flag"
+  )) %>%
+  mutate(
+    license_expiration_date = as.Date(license_expiration_date, format = "%m/%d/%Y"),
+    unkown_date = as.Date(NA)
+  )
+# ... flags, normalization as above, then:
+txl <- txl %>% mutate(
+  license_expiration_year = if_else(
+    license_expiration_date == as.Date("1900-01-01"),
+    NA_integer_, as.integer(year(license_expiration_date))
+  )
+)
+```

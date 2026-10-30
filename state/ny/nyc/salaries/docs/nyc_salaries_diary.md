@@ -827,3 +827,43 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: October 2026
+
+Rebuilt 2026-10-28 with every fiscal year the city now publishes, FY2014–FY2025 (6,775,830 rows), as
+`nyc_salaries_2014-2025.csv`. It replaces `nyc_salaries_clean.csv` (DataFile 979). The 2020 file was FY2014–2019
+(3,333,368 rows), even though the dataset record said 2015–2020.
+
+What changed:
+
+* **Source moved.** Same dataset id, now on NYC Open Data: 
+  <https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e>, download
+  `https://data.cityofnewyork.us/api/views/k397-673e/rows.csv?accessType=DOWNLOAD` (data.ny.gov redirects there).
+  It still holds the full history in one file, with the same 17 columns.
+* **Steps are the same** (clean_names, state/city, agency_start_date `%m/%d/%Y`, total_gross_pay, na_flag,
+  dupe_flag; same 22 output columns in the same order). Small code changes: read every column as character and
+  convert the numeric ones explicitly; `write_csv(file = )` (`path =` is deprecated in readr >= 2); campfin's
+  `flag_na()`/`flag_dupes()` written inline with the same meaning. The script used is
+  [`code/nyc_salaries.R`](../code/nyc_salaries.R). Its core:
+
+``` r
+nyp <- read_csv(raw_file, col_types = cols(.default = col_character())) %>% clean_names()
+num_cols <- c("fiscal_year", "payroll_number", "base_salary", "regular_hours", "regular_gross_paid",
+              "ot_hours", "total_ot_paid", "total_other_pay")
+nyp <- nyp %>%
+  mutate(
+    across(all_of(num_cols), parse_double),
+    state = "NY",
+    city = "NEW YORK CITY",
+    agency_start_date = as.Date(agency_start_date, format = "%m/%d/%Y"),
+    total_gross_pay = regular_gross_paid + total_ot_paid + total_other_pay,
+    na_flag = is.na(first_name) | is.na(last_name) | is.na(title_description))
+nyp$dupe_flag <- duplicated(nyp) | duplicated(nyp, fromLast = TRUE)
+write_csv(nyp, path(proc_dir, "nyc_salaries_2014-2025.csv"), na = "")
+```
+
+Check against the 2020 file: FY2014–2018 are row-for-row identical. FY2019 has 288 fewer rows, all Police Department
+rows the city now withholds (NYPD and the DA offices are redacted under FOIL), and 87 more rows were redacted further.
+"No duplicate rows" above was not quite true: `flag_dupes` flags 31 rows in the 2020 file and 403 in the 2026 one.
+Starting with FY2023, OT *hours* use a new method and can't be compared with earlier years; OT dollars can.
+Year in search is still `fiscal_year` (the year ends June 30).

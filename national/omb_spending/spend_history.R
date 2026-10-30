@@ -284,10 +284,16 @@ for (i in seq_len(nrow(bulk_names))) {
   if (is.na(fy_url) || !nzchar(fy_url)) {
     fy_url <- paste0("https://files.usaspending.gov/generated_downloads/", bulk_names$name[i])
   }
-  bulk_save <- GET(fy_url, ua, write_disk(path = raw_zip), progress(type = "down"))
-  if (http_error(bulk_save)) {
-    file_delete(raw_zip)
-    cli_alert_danger(wt("Download failed: {http_status(bulk_save)$message}"))
+  # a dropped connection raises an error rather than returning a response; either way,
+  # remove the partial zip so the next run downloads again instead of skipping it
+  bulk_save <- tryCatch(
+    GET(fy_url, ua, write_disk(path = raw_zip), progress(type = "down")),
+    error = function(e) e
+  )
+  if (inherits(bulk_save, "error") || http_error(bulk_save)) {
+    if (file_exists(raw_zip)) file_delete(raw_zip)
+    msg <- if (inherits(bulk_save, "error")) conditionMessage(bulk_save) else http_status(bulk_save)$message
+    cli_alert_danger(wt("Download failed: {msg}"))
     quit(save = "no", status = 1)
   }
   cli_alert_success(wt("Download complete {.emph ({file_size(raw_zip)})}"))

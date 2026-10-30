@@ -676,3 +676,51 @@ The following table describes the variables in our final exported file:
 | `year`                | `double`    | Fiscal quarter calendar year     |
 | `state_clean`         | `character` | Normalized vendor state          |
 | `city_clean`          | `character` | Normalized vendor city           |
+
+## Update: October 2026
+
+_Rebuilt 2026-10-14 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
+script is [`code/vt_contracts.R`](../code/vt_contracts.R); the steps above are unchanged except as noted here.
+Output: `vt_contracts_2009-2026.csv`, 2,588,461 rows, the same 19 columns in the same order._
+
+The source is still the Vermont Vendor Payments export (`786x-sbp3`, the same `rows.tsv` URL as above), downloaded
+2026-10-14: 2,588,462 lines, quarters ending 2009-09-30 to 2026-06-30 (portal updated 2026-07-08). It is the full
+history, so this is a **full replacement** of both earlier files (`vt_contracts_clean.csv`, 2009-2020, 1,680,169 rows;
+`vt_contracts_20200611-20230209.csv`, 2020-2022, 386,722 rows), not an append. Changes:
+
+1. **No "Update" step.** The `anti_join()` against the old file above is not run; every row comes from the new export.
+2. **Grand-total line.** The export now ends with a total line (no quarter, department or vendor; $1,445,153,228.60).
+   It is dropped.
+3. **One payment has no quarter** (Public Safety, Jiffy Lube, $58, new in the source). It is kept with `year` blank.
+   The `na_flag` column is not added, because the output must keep the old 19-column layout.
+4. **Accented vendor names.** In 25 vendor names the current export has the replacement character (U+FFFD) where the
+   old files had an accented letter ("Belle's Caf�" vs "Belle's Café"). They are restored from the old files
+   when the vendor number matches and the name matches with each U+FFFD standing for one character.
+5. **Canadian provinces** are listed inline (AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT) instead of scraped
+   from the NCBI page.
+6. **Amounts** are rounded to cents; the old 2009-2020 file carried floating-point noise (283.97999999999996).
+7. **Amendments.** The source has no amendment or superseded flag; nothing is dropped.
+8. `campfin` 1.0.11 from CRAN; no plots.
+
+`dupe_flag` marks 2,101 rows (0.08%). Compared with the old files, every 2009-2022 row matches on quarter, department,
+unit, vendor number, vendor, state, department ID, account, account number, fund and amount, except one payment the
+state removed (2019-12-31, BizLibrary, $201,600). As decided for this update, we use what the state publishes, so it is
+not carried over.
+
+| Year | Old files | New file |
+|:-----|----------:|---------:|
+| 2009-2022 | 2,066,891 | 2,066,890 |
+| 2023 | -- | 152,736 |
+| 2024 | -- | 152,381 |
+| 2025 | -- | 145,768 |
+| 2026 (Q1-Q2) | -- | 70,685 |
+| no quarter | -- | 1 |
+
+``` r
+vtc <- read_delim(raw_tsv, delim = "\t", name_repair = make_clean_names,
+                  locale = locale(date_format = "%m/%d/%Y"),
+                  col_types = cols(.default = col_character(), quarter_ending = col_date(), amount = col_number()))
+# drop the trailing grand-total line
+total_line <- is.na(vtc$quarter_ending) & is.na(vtc$department) & is.na(vtc$vendor)
+vtc <- vtc[!total_line, ]
+```

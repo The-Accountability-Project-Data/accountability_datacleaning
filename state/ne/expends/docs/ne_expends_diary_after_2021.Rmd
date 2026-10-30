@@ -750,3 +750,14 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_2026-10-28 (Claude, for Jacob Fenton): the e-filing extracts (now 2021-2026) are folded into the main Nebraska
+datasets (442 contributions / 443 expenditures) together with the legacy data -- see "Update: October 2026" in
+`ne_contribs_diary.Rmd` / `ne_expends_diary.Rmd` and the scripts in
+[`state/ne/code/`](../../code/). Two corrections to the steps above: the extracts are
+windows-1252, not UTF-8 (read with `locale(encoding = "windows-1252")`); and the download URLs are
+`https://nadc-e.nebraska.gov/PublicSite/Docs/BulkDataDownloads/{2021:2026}_...Extract.csv.zip`. Past years' files
+stop changing at the end of each year, so a refresh only needs the current year's file (and last year's once, in
+January)._

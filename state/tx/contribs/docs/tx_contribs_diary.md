@@ -973,3 +973,55 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-12 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
+script is [`code/tx_contribs.R`](../code/tx_contribs.R), adapted from this diary and [`tx_clean.R`](tx_clean.R); it
+was run on an EC2 box. Output: 28 yearly files, `tx_contribs_pre2000.csv` and `tx_contribs_2000.csv` to
+`tx_contribs_2026.csv` (9.38 GB in all), 36,435,383 rows, 43 columns._
+
+**Source.** The old URLs (`https://www.ethics.state.tx.us/data/search/cf/TEC_CF_CSV.zip` and the `dfs/search_CF.htm`
+page) now return 404. TEC's [campaign finance search page](https://www.ethics.state.tx.us/search/cf/) links the same
+"Campaign Finance CSV Database" at `https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip` (redirects to
+CloudFront), refreshed daily. The copy used was downloaded 2026-10-12 (1,062,969,558 bytes, Last-Modified 2026-10-12
+10:35 UTC): 147 files, 9.32 GB unzipped, with the same structure as before (`contribs_01.csv` to `contribs_111.csv`,
+37 fields each). It is the full history in one download, so every year was rebuilt. `CFS-ReadMe.txt` and
+`CFS-Codes.txt` are linked from the same page.
+
+``` r
+zip_url <- "https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip"
+```
+
+**Differences from the steps above:**
+
+1. **All source fields are kept.** The Trim step above kept 11 fields "for memory space" and never rejoined the rest.
+   The rebuild keeps all 37: the 17 columns of the 2023 file come first, with the same names and order, then the 26
+   restored source fields (contributor employer, occupation and job title, PAC FEIN, out-of-state PAC flag,
+   contribution description, itemize and travel flags, report id, received date, form and schedule type, filer
+   type, contributor type, name prefix/suffix/short name, county, country, region and the four law-firm fields).
+2. **Files are split by contribution year** (`tx_contribs_<year>.csv`). The script processes the 111 raw files one at
+   a time and appends each row to its year's file. After it ran, the 1994 (18) and 1999 (248) rows were combined into
+   `tx_contribs_pre2000.csv`, and the 17 rows with no contribution date were added to the file of the year their
+   report was received (2008-2014), with `contribution_yr` left blank. That step was done by hand on 2026-10-12; it is
+   now scripted as [`code/tx_contribs_pre2000.R`](../code/tx_contribs_pre2000.R), whose output matches the uploaded files
+   byte for byte.
+3. **Duplicates** use the 2023 definition: identical filer, contributor name and place, date and amount within the
+   same report-received date, ignoring the contribution id. They are found in a first pass that hashes those fields
+   across all files (`Rscript tx_contribs.R dupes`), then flagged in the cleaning pass
+   (`Rscript tx_contribs.R clean`). 1,998,816 rows (5.5%) are flagged. Flagging the same fields across all dates
+   instead flagged 19%, because it caught contributions repeated in amended reports.
+4. `na_flag` (date, contributor name, amount, filer) flags 28,746 rows (0.08%). ZIP, state and city normalization
+   (normalize, swap, refine) follow the steps above.
+
+**Superseded reports.** TEC marks records replaced by a later report with `infoOnlyFlag` ("Superseded by other
+report"). They are kept, as they were in the 2023 file, and can be filtered with the new `info_only_flag` column
+(TRUE = superseded). Whether to drop them in a future rebuild has not been decided.
+
+**Contributor street addresses** are not in the data, and never were: Texas Election Code §254.0401(e)-(f) requires
+TEC to remove every part of a contributor's address except city, state and ZIP before posting a report online.
+Payees, filers and other parties do have street addresses.
+
+**Years.** Coverage is 2000-2026; the dataset is listed that way. 266 earlier rows (18 dated 1994, 248 dated 1999)
+are kept, in `tx_contribs_pre2000.csv`. 2022 is the largest year (5.26 million rows), mostly ActBlue Texas
+(1.66 million) and Beto for Texas (1.49 million) during the governor's race.

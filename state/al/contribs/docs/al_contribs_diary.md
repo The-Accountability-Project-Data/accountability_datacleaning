@@ -961,3 +961,74 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-28 for The Accountability Project (Claude, for Jacob Fenton). The runnable script is
+[`code/al_contribs.R`](../code/al_contribs.R); the steps above are unchanged except as
+noted here. Output: `al_contribs_2013-2026.csv`, 1,208,485 rows, the same 29 columns in the same order._
+
+Alabama replaced the FCPA reporting system with a new one (Tyler Technologies, "AL Campaign Finance System"). The
+old `PublicSite` URLs now redirect to a sign-on page. The same yearly bulk files are published for 2013-2026, all
+regenerated nightly, on the new [Download Data page][dd26]. The page's table is loaded from a JSON list
+(`page.request.do?page=com.acf.common.page.transactiondatadownloadsresults&pageSize=100&pageNumber=1`; the page's
+own default is `pageSize=10`), and each file is downloaded by the id in that list
+(`page.request.do?page=getTransactionData&id=<id>`). The ids are not in year order, so read them from the list.
+The layout keys (`page.request.do?page=getResource&resource=cashContributionsExportLayout`, etc.) have the same
+fields in the same order as before.
+
+[dd26]: https://fcpa.alabamavotes.gov/page.request.do?page=page.acfPublicDownloadData
+
+Because every record ID was renumbered, the whole 2013-2026 history is rebuilt from the new files rather than
+appended to the 2023 file. Changes to the recipe:
+
+1. **Files** are now `<year>_<Type>Extract1.csv` inside each zip. `source_file` keeps the old form
+   (`CashContributionsExtract.csv_2013`).
+2. **First column** is now `CommitteeId`; it is renamed back to `org_id`.
+3. **No quoting.** The new files are unquoted and the state strips commas out of values
+   (`LIGHTFOOT  FRANKLIN & WHITE  LLC`), so files are read with `quote = ""`. This replaces the stray-quote regex
+   above (values such as `WILLIAM C. "BILL" THOMPSON` are read as published, as the 2023 file had them).
+4. **Line breaks inside fields.** A few address values contain raw line breaks that split a record across lines
+   (9 records / 18 lines in the contribution files). Lines are re-joined, with a space, until the record has exactly
+   the header's number of fields; a record that can't be re-joined stops the build (none did).
+5. **In-kind rows appear twice.** The new Cash Contributions export also contains every in-kind contribution
+   (`In-Kind (Itemized)` / `In-Kind (Non-Itemized)`), with the same ID, committee, date and amount as its row in the
+   In-Kind file. The old cash files had none. The 44,156 cash-file copies are dropped so in-kind gifts are not
+   counted twice (the In-Kind file's copy also has `nature_of`).
+6. **Amendments.** The new system exports each report's current state; the old "... Offset due to deletion/update of
+   filed item" rows are gone. `Amended = "Y"` (2,458 rows, almost all filed 2025-2026) marks a record filed on or
+   changed by an amended report -- the current version, with no earlier-filed twin -- so nothing is dropped as
+   superseded.
+7. **Encoding.** All 2026 source files are valid UTF-8 and are read as UTF-8.
+8. **dplyr >= 1.1:** `mutate(across(amended, `==`, "Y"))` becomes `mutate(amended = amended == "Y")`;
+   `col_date_usa()` becomes `col_date_mdy()`; the refine join uses explicit keys.
+
+``` r
+rejoin_lines <- function(f) {
+  x <- str_remove(str_split(read_file(f), "\n")[[1]], "\r$")
+  if (x[length(x)] == "") x <- x[-length(x)]
+  n_sep <- str_count(x[1], ","); k <- str_count(x, ",")
+  out <- character(); i <- 1
+  while (i <= length(x)) {
+    buf <- x[i]; kk <- k[i]
+    while (kk < n_sep && i < length(x)) { i <- i + 1; buf <- paste(buf, x[i]); kk <- kk + k[i] }
+    stopifnot(kk == n_sep)
+    out <- c(out, buf); i <- i + 1
+  }
+  out
+}
+read_al <- function(f) {
+  read_delim(I(paste0(paste(rejoin_lines(f), collapse = "\n"), "\n")), delim = ",", quote = "",
+             na = c("", " "), escape_backslash = FALSE, escape_double = FALSE, trim_ws = FALSE,
+             col_types = cols(.default = col_character()))
+}
+# ... stack and rename as above, then:
+alc <- alc %>% rename(org_id = committee_id)
+cash_ik <- str_starts(alc$source_file, "Cash") & str_starts(alc$type, "In-Kind")
+alc <- alc[!cash_ik, ]
+```
+
+Compared with the 2023 file, rows per transaction year 2013-2021 are within 0.3% (the old yearly files were
+grouped by filing, so the old 2013 _cash file_ had 37,523 rows but 54,290 rows were _dated_ 2013; the new build has
+54,298). 2022 has 13,817 more rows, from reports filed after the January 2023 snapshot. 99.0% of the old rows match
+a new row on amount + date + last name (letters and digits only, since commas are now stripped).

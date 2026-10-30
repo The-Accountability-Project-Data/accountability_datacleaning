@@ -106,6 +106,30 @@ feature and should be run as such. The project also uses the dynamic
 here::i_am("mn/expends/docs/mn_expends_diary.Rmd")
 ```
 
+## Update: October 2026
+
+Rebuilt 2026-10-28 (Claude, for the Accountability Project). See
+the script [`state/mn/code/mn_expends.R`](../../code/mn_expends.R) (with `mn_common.R`), which this diary now
+matches:
+
+* Same source link (`?download=-1890073264`, "Expenditures, including contributions made, by all entities - 2015
+  to present"). It is the full history, regenerated on every download: 402,530 records, 2015-01-01 to 2026-10-19,
+  UTF-8. Output `mn_expends_2015-2026.csv` (same 26 columns as the previous file).
+* **The download no longer has `Vendor address 1` / `Vendor address 2`.** Decision (2026-10-28): do not backfill
+  them from the old file. The two columns are kept but blank, so `address_clean` is blank too. Vendor city, state
+  and ZIP are still published and normalised.
+* `Date` is now ISO. The reader now uses `escape_double = TRUE`; the old `FALSE` turned each `""` into two quotes
+  in the output. It also applies the backslash-quote fix described under Read.
+* The refined cities are now joined back on the city keys of distinct refinements. Joining on every column
+  duplicated fully-duplicated rows, which is how the 2022 run turned 260,873 records into 260,875.
+* Year is the calendar year of the date (unchanged). There is no amendment flag, so no rows are dropped as
+  superseded.
+* The export is named by years: `mn_expends_2015-2026.csv`.
+
+_Note: this rendered copy was not re-knitted. The code shown below is from the previous build; the current
+steps are in [`mn_expends_diary.Rmd`](mn_expends_diary.Rmd) and [`state/mn/code/mn_expends.R`](../../code/mn_expends.R)._
+
+
 ## Source
 
 Data is obtained from the [Minnestoa Campaign Finance Board

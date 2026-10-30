@@ -1,266 +1,162 @@
+#!/usr/bin/env Rscript
+
 # Kiernan Nicholls
 # Parse LDA files to CSV
 # https://lda.senate.gov/api/
 # Fri Oct 29 13:41:24 2021 ------------------------------
+#
+# Revised Oct 2026 (Claude, for the datacleaning_agents effort):
+#   * reads the per-filing-year JSON pages written by scrape_lda_filings.R
+#     (data/json/filings/<year>/page_*.json) and writes one file per table per filing year:
+#     data/csv/lda_<table>_<year>.csv
+#   * the same five tables as before, built the same way (one row per filing; per filing x lobbyist with the
+#     issues collapsed; per conviction disclosure; per foreign entity; per affiliated organization)
+#   * columns follow lda_cols.csv (the headers of the Jan 2023 update files), in that order; fields the API
+#     has added since are appended at the end (sorted), so every year's file has the same header
+#   * values are as published; dt_posted is converted to UTC (2022-04-05T05:47:33Z), as the old files had it
+#   * no upload (the old version uploaded public-read); a check row per table/year goes to data/csv/parse_check.csv
+#
+#   * a folder written with LDA_POSTED_AFTER (e.g. 2022_after_2023-01-11) is parsed to
+#     lda_<table>_2022_posted-after-20230111.csv
+#   * LDA_EXCLUDE_UUIDS=<file> (one filing_uuid per line): filings already in an older file are skipped, so they
+#     aren't loaded twice (2026-10-07: the 71,511 filings of the Jan 2023 update file)
+#
+# Rscript --vanilla national/lda_filings/parse_lda_filings.R <year | year_after_yyyy-mm-dd> [...]
 
-suppressPackageStartupMessages(library(tidyverse))
-suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(jsonlite))
-suppressPackageStartupMessages(library(aws.s3))
-suppressPackageStartupMessages(library(here))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(cli))
 suppressPackageStartupMessages(library(fs))
 
-# structure ---------------------------------------------------------------
+here_dir <- if (dir_exists("national/lda_filings")) "national/lda_filings" else "."
+json_root <- path(here_dir, "data", "json", "filings")
+csv_dir <- dir_create(path(here_dir, "data", "csv"))
+check_file <- path(csv_dir, "parse_check.csv")
+ref <- read_csv(path(here_dir, "lda_cols.csv"), col_types = cols(.default = col_character()))
 
-# Each JSON file contains 4 components with `results` containing filings
-# There are 250 results in each file, 1 per row when converted to frame
-# Each filing contains 6 additional nested data frames:
-#   1. Registrants
-#   2. Clients
-#   3. Lobbying activity
-#       3a. Lobbyists
-#       3b. Government Entities
-#   4. Conviction disclosures
-#   5. Foreign entities
-#   6. Affiliated organizations
+years <- commandArgs(trailingOnly = TRUE)
+if (!length(years) || !all(grepl("^\\d{4}(_after_\\d{4}-\\d{2}-\\d{2})?$", years))) {
+  cli_alert_danger("Usage: parse_lda_filings.R <year | year_after_yyyy-mm-dd> [...]"); quit(save = "no", status = 1)
+}
+label <- function(token) sub("_after_(\\d{4})-(\\d{2})-(\\d{2})$", "_posted-after-\\1\\2\\3", token)
+exclude_file <- Sys.getenv("LDA_EXCLUDE_UUIDS", "")
+exclude <- if (nzchar(exclude_file)) unique(trimws(read_lines(exclude_file))) else character()
+if (length(exclude)) cli_alert_info("Skipping {length(exclude)} filing_uuids listed in {exclude_file}")
 
-# convert nested JSON to flat CSV by filing
-csv_dir <- here("national", "lda_filings", "data", "csv")
+# helpers -------------------------------------------------------------------
 
-fil_csv <- path(csv_dir, "lda_client-firm.csv")
-lob_csv <- path(csv_dir, "lda_firm-lobbyist.csv")
-con_csv <- path(csv_dir, "lda_convict-lobbyist.csv")
-for_csv <- path(csv_dir, "lda_client-foreign.csv")
-org_csv <- path(csv_dir, "lda_client-affiliate.csv")
+na_chr <- function(v) if (is.null(v) || length(v) == 0) NA_character_ else as.character(v)
 
-# text file containing the files already converted
-prog_txt <- file_create(here("national", "lda_filings", "data", "prog_list.txt"))
-done_json <- fs_path(read_lines(prog_txt))
-
-# list the json files and remove those already done
-json_dir <- here("national", "lda_filings", "data", "json")
-lob_json <- dir_ls(json_dir, glob = "*.json")
-lob_json <- lob_json[lob_json %out% done_json]
-
-n <- length(lob_json)
-# loop through each json and write to existing csv
-for (i in seq_along(lob_json)) {
-  message(paste(i, n, sep = "/"))
-
-  x <- fromJSON(
-    # txt = lob_json[length(lob_json) - 1],
-    txt = lob_json[i],
-    simplifyDataFrame = TRUE,
-    flatten = TRUE
-  )
-
-  # filings ---------------------------------------------------------------
-
-  # the relationship between firm and hired client
-  # filing id, firm, client, date, income, expense
-
-  lda_filings <- as_tibble(x$results)
-  lda_filings <- lda_filings %>%
-    select(-ends_with("_display"), -contains("ppb_")) %>%
-    mutate(across(dt_posted, ymd_hms))
-
-  lda_other <- lda_filings %>% select(filing_uuid, where(is.list))
-  lda_filings <- select(lda_filings, -where(is.list))
-
-  write_csv(
-    x = lda_filings,
-    file = fil_csv,
-    na = "",
-    append = file_exists(fil_csv),
-    progress = FALSE
-  )
-
-  # lobbyists -------------------------------------------------------------
-
-  # the relationship between a firm and the lobbyists they hire for issues
-
-  just_reg <- lda_filings %>%
-    select(
-      filing_uuid, dt_posted, registrant.id, registrant.name,
-      registrant.address_1, registrant.address_2,
-      registrant.city, registrant.state, registrant.zip
-    )
-
-  all_lob <- lda_other %>%
-    select(filing_uuid, lobbying_activities) %>%
-    unnest(lobbying_activities)
-
-  no_lob <- map_lgl(all_lob$lobbyists, is_empty)
-  all_lob$lobbyists[no_lob] <- rep(list(data.frame()), sum(no_lob))
-
-  all_lob <- unnest(all_lob, lobbyists)
-
-  lob_issue <- all_lob %>%
-    group_by(filing_uuid, lobbyist.id) %>%
-    summarise(
-      all_issues = paste(general_issue_code_display, collapse = ", "),
-      .groups = "drop_last"
-    )
-
-  all_lob <- all_lob %>%
-    select(
-      filing_uuid,
-      starts_with("lobbyist."),
-      -lobbyist.prefix,
-      -lobbyist.suffix
-    ) %>%
-    rename(
-      lobbyist.prefix = lobbyist.prefix_display,
-      lobbyist.suffix = lobbyist.suffix_display
-    ) %>%
-    distinct()
-
-  all_lob <- inner_join(
-    x = all_lob,
-    y = lob_issue,
-    by = c("filing_uuid", "lobbyist.id")
-  )
-
-  lob_out <- right_join(
-    x = just_reg,
-    y = all_lob,
-    by = "filing_uuid"
-  )
-
-  write_csv(
-    x = lob_out,
-    file = lob_csv,
-    na = "",
-    append = file_exists(lob_csv),
-    progress = FALSE
-  )
-
-  # convictions -----------------------------------------------------------
-
-  con_lob <- lda_other %>%
-    select(filing_uuid, conviction_disclosures) %>%
-    unnest(conviction_disclosures)
-
-  if (nrow(con_lob) > 1) {
-    con_out <- right_join(
-      x = just_reg,
-      y = con_lob,
-      by = "filing_uuid"
-    )
-
-    write_csv(
-      x = con_out,
-      file = con_csv,
-      na = "",
-      append = file_exists(con_csv),
-      progress = FALSE
-    )
+# scalar fields of a record, nested objects flattened as parent.child; arrays are skipped
+flat <- function(x, prefix = "") {
+  out <- list()
+  for (k in names(x)) {
+    v <- x[[k]]
+    key <- paste0(prefix, k)
+    if (is.list(v) && !is.null(names(v))) {
+      out <- c(out, flat(v, paste0(key, ".")))
+    } else if (is.null(v) || (is.atomic(v) && length(v) <= 1)) {
+      out[[key]] <- na_chr(v)
+    }
   }
+  out
+}
+keep <- function(x) x[!grepl("_display$", names(x)) & !grepl("ppb_", names(x))]
+utc <- function(x) format(ymd_hms(x, quiet = TRUE), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 
-  # foreign entities ------------------------------------------------------
-
-  just_client <- lda_filings %>%
-    select(
-      filing_uuid, dt_posted, client.id, client.name, client.state,
-    )
-
-  has_fe <- any(!map_lgl(lda_other$foreign_entities, is_empty))
-  if (has_fe) {
-    names(lda_other$foreign_entities) <- lda_filings$filing_uuid
-    foreign_entity <- bind_rows(lda_other$foreign_entities, .id = "filing_uuid")
-    foreign_entity <- as_tibble(foreign_entity) %>%
-      select(-ends_with("_display"), -contains("ppb_")) %>%
-      rename_with(~paste0("entity.", .), -1)
-
-    for_out <- inner_join(
-      x = just_client,
-      y = foreign_entity,
-      by = "filing_uuid"
-    )
-
-    write_csv(
-      x = for_out,
-      file = for_csv,
-      na = "",
-      append = file_exists(for_csv),
-      progress = FALSE
-    )
-
+lob_fields <- function(l, with_display) {
+  out <- list(`lobbyist.id` = na_chr(l$id))
+  if (with_display) {
+    out <- c(out, list(`lobbyist.prefix` = na_chr(l$prefix), `lobbyist.prefix_display` = na_chr(l$prefix_display)))
+  } else {
+    out <- c(out, list(`lobbyist.prefix` = na_chr(l$prefix_display)))
   }
-
-  # affiliated orgs -------------------------------------------------------
-
-  has_ao <- any(!map_lgl(lda_other$affiliated_organizations, is_empty))
-  if (has_ao) {
-    names(lda_other$affiliated_organizations) <- lda_filings$filing_uuid
-    affiliated_org <- bind_rows(
-      lda_other$affiliated_organizations,
-      .id = "filing_uuid"
-    )
-    affiliated_org <- as_tibble(affiliated_org) %>%
-      select(-ends_with("_display"), -contains("ppb_")) %>%
-      rename_with(~paste0("org.", .), -1)
-
-    org_out <- inner_join(
-      x = just_client,
-      y = affiliated_org,
-      by = "filing_uuid"
-    )
-
-    write_csv(
-      x = org_out,
-      file = org_csv,
-      na = "",
-      append = file_exists(org_csv),
-      progress = FALSE
-    )
+  out <- c(out, list(`lobbyist.first_name` = na_chr(l$first_name), `lobbyist.nickname` = na_chr(l$nickname),
+                     `lobbyist.middle_name` = na_chr(l$middle_name), `lobbyist.last_name` = na_chr(l$last_name)))
+  if (with_display) {
+    c(out, list(`lobbyist.suffix` = na_chr(l$suffix), `lobbyist.suffix_display` = na_chr(l$suffix_display)))
+  } else {
+    c(out, list(`lobbyist.suffix` = na_chr(l$suffix_display)))
   }
-
-  # write progress to text file
-  write_lines(lob_json[i], prog_txt, append = TRUE)
-
 }
 
-# date files --------------------------------------------------------------
-all_csv <- dir_ls(csv_dir, glob = "*.csv")
+parse_filing <- function(r) {
+  f <- keep(flat(r))
+  f$dt_posted <- utc(f$dt_posted)
+  reg <- list(filing_uuid = f$filing_uuid, dt_posted = f$dt_posted,
+              `registrant.id` = f$registrant.id, `registrant.name` = f$registrant.name,
+              `registrant.address_1` = f$registrant.address_1, `registrant.address_2` = f$registrant.address_2,
+              `registrant.city` = f$registrant.city, `registrant.state` = f$registrant.state,
+              `registrant.zip` = f$registrant.zip)
+  cli <- list(filing_uuid = f$filing_uuid, dt_posted = f$dt_posted, `client.id` = f$client.id,
+              `client.name` = f$client.name, `client.state` = f$client.state)
 
-if (!all(str_detect(all_csv, "\\d{8}"))) {
-  # find date of last file update
-  aws_ls <- get_bucket_df(bucket = "publicaccountability", prefix = "csv")
+  # lobbyists: one row per lobbyist, issues of every activity they appear on, in order
+  lobs <- list(); issues <- list()
+  for (a in r$lobbying_activities) {
+    for (le in a$lobbyists) {
+      id <- na_chr(le$lobbyist$id)
+      if (is.null(lobs[[id]])) lobs[[id]] <- lob_fields(le$lobbyist, with_display = FALSE)
+      issues[[id]] <- c(issues[[id]], na_chr(a$general_issue_code_display))
+    }
+  }
+  lob_rows <- lapply(names(lobs), function(id) c(reg, lobs[[id]], list(all_issues = paste(issues[[id]], collapse = ", "))))
 
-  last_dt <- aws_ls$Key %>%
-    str_subset("lda") %>%
-    str_extract_all("\\d{8}") %>%
-    unlist() %>%
-    as.Date(format = "%Y%m%d") %>%
-    max()
-
-  date_stamp <- sprintf(
-    "_%s-%s.csv",
-    str_remove_all(last_dt + 1, "-"),
-    str_remove_all(Sys.Date(), "-")
-  )
-
-  new_csv <- all_csv %>%
-    str_replace("\\.csv", date_stamp)
-
-  file_move(all_csv, new_csv)
-
-  all_csv <- new_csv
+  con_rows <- lapply(r$conviction_disclosures, function(cd) {
+    c(reg, list(date = na_chr(cd$date), description = na_chr(cd$description)), lob_fields(cd$lobbyist, TRUE))
+  })
+  for_rows <- lapply(r$foreign_entities, function(e) {
+    e <- keep(flat(e)); names(e) <- paste0("entity.", names(e)); c(cli, e)
+  })
+  org_rows <- lapply(r$affiliated_organizations, function(o) {
+    o <- keep(flat(o)); names(o) <- paste0("org.", names(o)); c(cli, o)
+  })
+  list(`client-firm` = list(f), `firm-lobbyist` = lob_rows, `convict-lobbyist` = con_rows,
+       `client-foreign` = for_rows, `client-affiliate` = org_rows)
 }
 
-# upload files ------------------------------------------------------------
+# parse ------------------------------------------------------------------------
 
-for (i in seq_along(all_csv)) {
-  cli_h1(basename(all_csv[i]))
-  put_object(
-    file = all_csv[i],
-    object = path("csv", basename(all_csv[i])),
-    bucket = "publicaccountability",
-    acl = "public-read",
-    multipart = TRUE,
-    verbose = FALSE,
-    show_progress = TRUE
-  )
+tables <- c("client-firm", "firm-lobbyist", "convict-lobbyist", "client-foreign", "client-affiliate")
+parsed <- list()
+for (year in years) {
+  pages <- dir_ls(path(json_root, year), regexp = "page_\\d+\\.json$")
+  cli_h2("filings {year}: {length(pages)} pages")
+  acc <- setNames(lapply(tables, function(t) list()), tables)
+  n_skip <- 0
+  for (p in pages) {
+    for (r in fromJSON(p, simplifyVector = FALSE)$results) {
+      if (length(exclude) && isTRUE(r$filing_uuid %in% exclude)) { n_skip <- n_skip + 1; next }
+      x <- parse_filing(r)
+      for (t in tables) if (length(x[[t]])) acc[[t]][[length(acc[[t]]) + 1]] <- x[[t]]
+    }
+  }
+  if (length(exclude)) cli_alert_info("{year}: skipped {n_skip} filings already in an older file")
+  parsed[[as.character(year)]] <- lapply(acc, function(chunks) {
+    rows <- unlist(chunks, recursive = FALSE)  # one list of rows per filing -> one list of rows
+    if (length(rows)) bind_rows(rows) else tibble()
+  })
 }
+
+# align across years so each table has one header, then write --------------------------------
+
+for (t in tables) {
+  all_cols <- unique(unlist(lapply(parsed, function(p) names(p[[t]]))))
+  want <- ref$column[ref$table == t]
+  extra <- sort(setdiff(all_cols, want))
+  for (year in names(parsed)) {
+    df <- parsed[[year]][[t]]
+    for (m in setdiff(c(want, extra), names(df))) df[[m]] <- rep(NA_character_, nrow(df))
+    df <- df[, c(want, extra)]
+    out <- path(csv_dir, sprintf("lda_%s_%s.csv", t, label(year)))
+    write_csv(df, out, na = "")
+    write_csv(tibble(table = t, year = year, file = basename(out), rows = nrow(df), cols = ncol(df),
+                     blank_ref_cols = paste(want[vapply(want, function(c) all(is.na(df[[c]])), TRUE)], collapse = " "),
+                     added_cols = paste(extra, collapse = " "), checked = as.character(Sys.time())),
+              check_file, append = file_exists(check_file))
+    cli_alert_success("{basename(out)}: {format(nrow(df), big.mark = ',')} rows x {ncol(df)} cols")
+  }
+}
+cli_alert_info("Done; nothing was uploaded.")

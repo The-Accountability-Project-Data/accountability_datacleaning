@@ -1,188 +1,151 @@
+#!/usr/bin/env Rscript
+
 # Kiernan Nicholls
 # Find all senate lobbyists
 # https://lda.senate.gov/api/
 # Tue Jul 27 14:21:30 2021 ------------------------------------------------
+#
+# Revised Oct 2026 (Claude, for the datacleaning_agents effort):
+#   * the API moved to https://lda.gov/api/v1/ (lda.senate.gov was sunset July 31, 2026)
+#   * pages are now capped at 25 records, and the API requires a filter to page past page 1, so this
+#     pages one filing_year at a time, ordered by dt_posted (filings posted mid-run land at the end)
+#   * one request at a time, at least DELAY seconds between requests (user's rule); API key required
+#   * resumable: each page is saved as JSON the moment it arrives (write .part, then rename) and a restart
+#     continues after the last saved page
+#   * on HTTP 429 it waits out a short Retry-After once, otherwise stops; server errors retry 3 times with
+#     backoff, then stop -- it never hammers the API
+#   * every request is logged to data/json/<endpoint>/requests.csv
+#   * also scrapes the contributions (LD-203) endpoint
+#
+# Rscript --vanilla national/lda_filings/scrape_lda_filings.R <filings|contributions> <year> [<year> ...]
+# LDA_API_KEY must be set in the environment (never put the key in this file).
 
-suppressPackageStartupMessages(library(tidyverse))
-suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(httr))
+suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(cli))
 suppressPackageStartupMessages(library(fs))
 
-cli_h1("Save senate lobbyist filings")
-cli_ol()
-cli_li("Request all/subset of filings")
-cli_li("Convert JSON page to CSV and save")
-cli_li("Request next page of filings")
-cli_li("Append subsequent results to CSV")
-cli_end()
+`%||%` <- function(x, y) if (is.null(x)) y else x # base R has it only from 4.4
 
-# functions ---------------------------------------------------------------
-
-#> For clients to authenticate using an API Key, the token key must be included
-#> in the Auhtorization HTTP header and must be prefixed by the string literal
-#> "Token", with whitespace separating the two strings...
-
-#> For clients without an API Key, no special authentication is required,
-#> however anonymous clients are subject to more strict request throttling.
-
-# Sys.setenv(LDA_API_KEY = "")
-# usethis::edit_r_environ()
-auth_lda <- function(lda_key = Sys.getenv("LDA_API_KEY")) {
-  httr::user_agent("https://publicaccountability.org/")
-  # add the key as HTTP header from environment per docs
-  if (nzchar(lda_key)) {
-    httr::add_headers(Authorization = paste("Token", lda_key))
-  } else if (exists("api_key")) {
-    httr::add_headers(Authorization = paste("Token", get("api_key")))
-  }
-}
+DELAY <- 0.5         # seconds between requests; one request in flight at a time
+PAGE_SIZE <- 25      # the API's maximum (100 and 250 tested 2026-10-06: still 25)
+API <- "https://lda.gov/api/v1"
+MAX_PAGES <- as.integer(Sys.getenv("LDA_MAX_PAGES", "0")) # testing only: stop each year after this many pages
+# optional: only filings posted after this date (yyyy-mm-dd); pages go to <year>_after_<date>/ instead of <year>/
+POSTED_AFTER <- Sys.getenv("LDA_POSTED_AFTER", "")
+if (nzchar(POSTED_AFTER) && !grepl("^\\d{4}-\\d{2}-\\d{2}$", POSTED_AFTER)) cli_quit("LDA_POSTED_AFTER must be yyyy-mm-dd")
+UA <- user_agent("https://publicaccountability.org/")
 
 cli_quit <- function(text) {
-  cli::cli_alert_danger(text = text)
+  cli_alert_danger(text)
   quit(save = "no", status = 1)
 }
 
 # arguments ---------------------------------------------------------------
-# Argument order:
-#   1. Directory to which JSON files are saved
-#   2. Date after which filings are posted (optional)
-#   3. The alphanumeric API key (optional)
 
-# Rscript scrape_lda_filings.R {output dir} {from date} {api key}
-# Rscript scrape_lda_filings.R ~/Documents 2021-01-01 abcdefg123456
-
-cli_h2("Get command arguments")
-# capture output file from command line
 cmd_args <- commandArgs(trailingOnly = TRUE)
-if (length(cmd_args) >= 1 && grepl("csv$", cmd_args[1])) {
-  lob_dir <- cmd_args[1]
-} else {
-  lob_dir <- file.path(getwd(), "data")
+if (length(cmd_args) < 2 || !(cmd_args[1] %in% c("filings", "contributions"))) {
+  cli_quit("Usage: scrape_lda_filings.R <filings|contributions> <year> [<year> ...]")
+}
+endpoint <- cmd_args[1]
+years <- as.integer(cmd_args[-1])
+if (anyNA(years)) cli_quit("Years must be integers")
+
+api_key <- Sys.getenv("LDA_API_KEY")
+if (!nzchar(api_key)) cli_quit("Set LDA_API_KEY in the environment")
+auth <- add_headers(Authorization = paste("Token", api_key))
+
+here_dir <- if (dir_exists("national/lda_filings")) "national/lda_filings" else "."
+out_root <- dir_create(path(here_dir, "data", "json", endpoint))
+req_log <- path(out_root, "requests.csv")
+if (!file_exists(req_log)) {
+  write("time_utc,url,status,n_results,seconds,note", req_log)
 }
 
-cli_alert_info("Saving filings to {.path {lob_dir}}")
+# one request ---------------------------------------------------------------
 
-has_dir <- dir.exists(lob_dir)
-dir_txt <- ifelse(has_dir, "exists", "created")
-dir.create(path = lob_dir, showWarnings = FALSE)
+last_request_end <- 0
 
-cli_alert_success(sprintf("{.path %s} directory %s", lob_dir, dir_txt))
-
-if (length(cmd_args) >= 2) {
-  dt_from <- ifelse(grepl("^\\d{4}", cmd_args[2]), cmd_args[2], NULL)
-  cli_alert_info("Requesting filings from {dt_from}")
-} else {
-  dt_from <- NULL
-  cli_alert_info("Requesting all filings")
-}
-
-
-if (length(cmd_args) >= 3) {
-  api_key <- ifelse(nchar("csv$") > 20, cmd_args[3], "")
-  cli_alert_info("Using API key: {col_red(api_key)}")
-} else {
-  api_key <- Sys.getenv("LDA_API_KEY")
-}
-
-# details -----------------------------------------------------------------
-
-#> ### Introduction
-#> Section 209 of HLOGA requires the Secretary of the Senate to make all
-#> documents filed under the LDA, as amended, available to the public over the
-#> Internet. The information and documents may be accessed in two ways. A
-#> researcher with a specific query in mind may use the query system, which has
-#> been expanded from that available prior to January 1, 2008.
-
-#> ### Request Throttling
-#> All REST API requests are throttled to prevent abuse and to ensure
-#> stability. Our API is rate limited depending the type of authentication option
-#> you choose... API Key (Registered): 20000/hour
-
-#> ### Pagination
-#> Large result sets are split into individual pages of data. The pagination
-#> links are provided as part of the content of the response via the next and
-#> previous keys in the response. You can control which page to request by using
-#> the page query string parameter.
-
-# first page --------------------------------------------------------------
-
-cli_h2("Request data")
-# filing contains data on registrant and client
-
-pg_size <- 250
-
-# check for existing data
-exist_json <- dir_ls(lob_dir, glob = "*.json")
-if (length(exist_json) > 0) {
-  exist_row <- str_extract_all(exist_json, "\\d+", simplify = TRUE)
-  exist_row <- matrix(
-    as.numeric(exist_row),
-    ncol = ncol(exist_row)
+get_page <- function(year, page) {
+  url <- modify_url(
+    paste0(API, "/", endpoint, "/"),
+    query = c(list(filing_year = year, ordering = "dt_posted", page_size = PAGE_SIZE, page = page),
+              if (nzchar(POSTED_AFTER)) list(filing_dt_posted_after = POSTED_AFTER))
   )
-
-  max_json <- exist_json[which.max(exist_row[, 2])]
-  fil_dat <- fromJSON(max_json)
-  n_row <- max(exist_row[, 2])
-  n_pg <- as.integer(str_extract(fil_dat$previous, "\\d+(?=&)")) + 1
-
-  all_row <- fil_dat$count
-  all_pg <- ceiling(fil_dat$count/pg_size)
-  prop_row <- paste0(round(100 * (n_row / all_row), 2), "%")
-
-} else {
-  n_pg <- 1
-  n_row <- 0
-
-  # request first page
-  cli_h3("Page number: {n_pg}")
-  fil_get <- RETRY(
-    verb = "GET",
-    url = "https://lda.senate.gov/api/v1/filings/",
-    query = list(page_size = pg_size, filing_dt_posted_after = dt_from),
-    auth_lda()
-  )
-
-  # convert request to dataframe
-  fil_txt <- content(fil_get, as = "text", encoding = "UTF-8")
-  fil_dat <- content(fil_get, as = "parsed")
-
-  # how many rows and pages of 25
-  all_row <- fil_dat$count
-  all_pg <- ceiling(fil_dat$count/pg_size)
-
-  cli_alert_info("Total record count: {all_row} ({all_pg} pages)")
-
-  # create file name
-  new_row <- length(fil_dat$results)
-  lob_json <- sprintf("lda-filing_%i-%i.json", n_row + 1, n_row + new_row)
-
-  # update progress check
-  n_row <- n_row + new_row
-  prop_row <- paste0(round(100 * (n_row / all_row), 2), "%")
-
-  # write results to file
-  write_file(x = prettify(fil_txt), file = file.path(lob_dir, lob_json))
+  for (attempt in 1:4) {
+    wait <- DELAY - (as.numeric(Sys.time()) - last_request_end)
+    if (wait > 0) Sys.sleep(wait)
+    t0 <- Sys.time()
+    res <- tryCatch(GET(url, UA, auth, timeout(120)), error = function(e) e)
+    last_request_end <<- as.numeric(Sys.time())
+    secs <- round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 2)
+    if (inherits(res, "error")) {
+      status <- NA; note <- gsub("[,\n]", " ", conditionMessage(res)); n <- NA
+    } else {
+      status <- status_code(res); note <- ""; n <- NA
+    }
+    if (isTRUE(status == 200)) {
+      txt <- content(res, as = "text", encoding = "UTF-8")
+      dat <- fromJSON(txt, simplifyVector = FALSE)
+      n <- length(dat$results)
+      write(sprintf("%s,%s,%s,%s,%s,", format(Sys.time(), tz = "UTC"), url, status, n, secs),
+            req_log, append = TRUE)
+      return(list(txt = txt, dat = dat))
+    }
+    write(sprintf("%s,%s,%s,%s,%s,%s", format(Sys.time(), tz = "UTC"), url, status, n, secs, note),
+          req_log, append = TRUE)
+    if (isTRUE(status == 429)) {
+      retry_after <- suppressWarnings(as.numeric(headers(res)[["retry-after"]] %||% NA))
+      if (attempt == 1 && !is.na(retry_after) && retry_after <= 120) {
+        cli_alert_warning("Throttled (429); waiting {retry_after}s once")
+        Sys.sleep(retry_after + 1)
+        next
+      }
+      cli_quit("Throttled (429), Retry-After {retry_after}s: stopping rather than pushing. Resume later.")
+    }
+    if (isTRUE(status %in% c(400, 401, 403, 404))) {
+      cli_quit("HTTP {status} for {url}: stopping")
+    }
+    if (attempt == 4) cli_quit("Request failed 4 times ({status} {note}) for {url}: stopping. Resume later.")
+    backoff <- c(10, 30, 60)[attempt]
+    cli_alert_warning("HTTP {status} {note}; retrying in {backoff}s")
+    Sys.sleep(backoff)
+  }
 }
 
-# next page ---------------------------------------------------------------
+# each year ---------------------------------------------------------------
 
-cli_alert_success("Total results written: {n_row} ({prop_row})")
-has_next <- !is.null(fil_dat[["next"]])
-while (has_next) {
-  n_pg <- n_pg + 1
-  cli_h3("Page number: {n_pg}")
-  # request next page if exists
-  fil_get <- RETRY("GET", fil_dat[["next"]], auth_lda())
-  # repeat binding
-  fil_txt <- content(fil_get, "text", encoding = "UTF-8")
-  fil_dat <- content(fil_get, "parsed")
-  has_next <- !is.null(fil_dat[["next"]])
-  new_row <- length(fil_dat$results)
-  lob_json <- sprintf("lda-filing_%i-%i.json", n_row + 1, n_row + new_row)
-  # write to new file
-  write_file(prettify(fil_txt), file.path(lob_dir, lob_json))
-  n_row <- n_row + new_row
-  prop_row <- paste0(round(100 * (n_row / all_row), 2), "%")
-  cli_alert_success("Total results written: {n_row} ({prop_row})")
+for (year in years) {
+  cli_h1("{endpoint} {year}")
+  year_dir <- dir_create(path(out_root, if (nzchar(POSTED_AFTER)) paste0(year, "_after_", POSTED_AFTER) else year))
+  have <- dir_ls(year_dir, regexp = "page_\\d+\\.json$")
+  page <- if (length(have)) max(as.integer(sub(".*page_(\\d+)\\.json$", "\\1", have))) + 1 else 1
+  if (page > 1) cli_alert_info("Resuming at page {page} ({length(have)} pages on disk)")
+
+  repeat {
+    got <- get_page(year, page)
+    if (page == 1 || page %% 100 == 0) {
+      cli_alert_info("page {page} of {ceiling((got$dat$count %||% 0) / PAGE_SIZE)} (count {got$dat$count})")
+    }
+    if (length(got$dat$results) == 0) break
+    out <- path(year_dir, sprintf("page_%05d.json", page))
+    write(got$txt, paste0(out, ".part"))
+    file_move(paste0(out, ".part"), out)
+    if (is.null(got$dat[["next"]])) break
+    if (MAX_PAGES > 0 && page >= MAX_PAGES) { cli_alert_warning("LDA_MAX_PAGES={MAX_PAGES}: stopping early (test)"); break }
+    page <- page + 1
+  }
+
+  # check: unique records on disk against the API's count on the last page
+  files <- dir_ls(year_dir, regexp = "page_\\d+\\.json$")
+  uuids <- unlist(lapply(files, function(f) {
+    vapply(fromJSON(f, simplifyVector = FALSE)$results, function(r) r$filing_uuid %||% NA_character_, "")
+  }))
+  last_count <- fromJSON(files[length(files)], simplifyVector = FALSE)$count
+  summary <- list(endpoint = endpoint, year = year, posted_after = POSTED_AFTER, pages = length(files), records = length(uuids),
+                  unique_uuid = length(unique(uuids)), api_count_at_end = last_count,
+                  finished_utc = format(Sys.time(), tz = "UTC"))
+  write(toJSON(summary, auto_unbox = TRUE), path(year_dir, "summary.json"))
+  cli_alert_success("{endpoint} {year}: {summary$pages} pages, {summary$unique_uuid} unique of count {last_count}")
 }
+cli_alert_success("Done; nothing was uploaded.")

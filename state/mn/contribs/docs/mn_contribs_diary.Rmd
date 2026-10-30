@@ -109,6 +109,21 @@ here::i_am("mn/contribs/docs/mn_contribs_diary.Rmd")
 [tap]: https://github.com/irworkshop/accountability_datacleaning
 [rproj]: https://support.rstudio.com/hc/en-us/articles/200526207-Using-Projects
 
+## Update: October 2026
+
+Rebuilt 2026-10-28 (Claude, for the Accountability Project). See
+the script [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R) (with `mn_common.R`), which this diary now
+matches:
+
+* Same source link (`?download=-2113865252`, "Contributions received by all entities - 2015 to present"). It is
+  the full history, regenerated from the board's database on every download, so the whole file is rebuilt:
+  654,449 records, 2015-01-01 to 2026-10-19, UTF-8. Output `mn_contribs_2015-2026.csv` (same 19 columns).
+* `Receipt date` is now ISO (`YYYY-MM-DD`), not m/d/Y.
+* Reader: about 50 values contain backslash-quotes. See the Read section.
+* **`year` is now the calendar year of the receipt date**, not the source's report `Year` (457 rows differ).
+* There is no amendment flag. The board's database keeps only the current version of an amended report, so no
+  rows are dropped as superseded.
+
 ## Data
 
 The data is obtained from the [Minnesota Campaign Finance Board (CFB)][cfb].
@@ -166,17 +181,26 @@ if (!file_exists(raw_csv)) {
 
 ## Read
 
+The download is RFC-style CSV, where `""` doubles a quote inside a value. In a few dozen values, though, the
+board's export wrote a quote as a backslash-quote (`\"`), and other values really do end with a literal backslash
+(`...Campaign Website\",`). A backslash-quote that is *not* followed by a comma or a line break is an escaped
+quote, so its quote is doubled before parsing. The backslash itself is kept, as published.
+
 ```{r raw_read}
+raw_txt <- read_file(raw_csv, locale = locale(encoding = "UTF-8"))
+raw_txt <- str_replace_all(raw_txt, '\\\\"(?![,\\r\\n])', '\\\\""')
 mnc <- read_delim(
-  file = raw_csv,
+  file = I(raw_txt),
   delim = ",",
+  na = "",
+  trim_ws = FALSE,
   escape_backslash = FALSE,
   escape_double = TRUE,
   col_types = cols(
     .default = col_character(),
     `Recipient reg num` = col_integer(),
     `Amount` = col_double(),
-    `Receipt date` = col_date_mdy(),
+    `Receipt date` = col_date("%Y-%m-%d"),
     `Year` = col_integer(),
     `Contributor` = col_character(),
     `Contrib Reg Num` = col_integer(),
@@ -290,14 +314,15 @@ mnc %>%
 
 ### Dates
 
-Since the `year` variable already exists, there is no need to create one. Any of
-these which do not match seems to fall near beginning of the year.
+The source `Year` is the report year. Since October 2026 we use the calendar year of the receipt date instead.
+These are the rows where the two differ.
 
 ```{r date_year}
 mean(mnc$year == year(mnc$date))
-mnc %>% 
-  filter(year != year(date)) %>% 
+mnc %>%
+  filter(year != year(date)) %>%
   count(month = month(date))
+mnc <- mutate(mnc, year = as.integer(year(date)))
 ```
 
 No further cleaning of the date variable is needed.

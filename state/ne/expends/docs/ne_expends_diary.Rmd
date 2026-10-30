@@ -703,3 +703,36 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-28 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-29.
+The runnable scripts are [`state/ne/code/ne_expends.R`](../../code/ne_expends.R) (with
+`ne_common.R`). Output: 237,512 rows, 44 columns, written as `ne_expends_1999-2026.csv` and uploaded as
+`ne_expends_1997-2026.csv`, renamed for the earliest year it actually holds._
+
+The legacy `nadc_data.zip` is frozen (last loaded 2022-07-11; newest filings received in 2021). Since 2022 the NADC
+publishes e-filed expenditures as yearly extracts on the [Data Download page][dd26]
+(`<year>_ExpenditureExtract.csv.zip`, 2021-2026, one filing year each, frozen at year end), processed separately in
+`ne_expends_diary_after_2021.Rmd` (unpublished dataset 479). The update puts both eras in one file:
+
+[dd26]: https://nadc-e.nebraska.gov/PublicSite/DataDownload.aspx
+
+1. **Old era** = this diary's published 2022 output (`ne_expends_19970101-20220401.csv`), values unchanged, its 21
+   columns first in the same order.
+2. **New era** = all six extracts, processed as in `ne_expends_diary_after_2021.Rmd`, read as windows-1252 with the
+   same reader as the contributions (no stray-quote regex; CRLF inside values -> space); `state_clean` = State as
+   published (that diary did not clean it).
+3. **Shared columns:** `committee_id` <- Org ID, `committee_name` <- Filer Name, `committee_type` <- Filer Type,
+   `date_received` <- Filed Date, `payee_name` <- "first middle last suffix", `payee_address` <- Address 1,
+   `expenditure_purpose` <- Description, `expenditure_date`, `expenditure_amount`, `na_flag`, `dupe_flag`,
+   `expenditure_year`, `zip_clean`, `state_clean`. `is_in_kind` and `payee_id` stay old-era only. New-only fields
+   follow (`expenditure_id, candidate_name, transaction_type, sub_type, payee_type, payee_last_name,
+   payee_first_name, payee_middle_name, payee_suffix, payee_address_2, payee_city, payee_state, payee_zip,
+   support_or_oppose, candidate_or_ballot_issue, jurisdiction_office_district, amended, employer, occupation,
+   principal_place_of_business, address_clean, city_clean`), then `source_file`.
+4. **2021 overlap:** same rule as the contributions (received 2021, same date, amount, committee name, new payee last
+   name inside the old payee name; one-to-one): 92 old rows dropped (41 matched the 2021 extract, 51 the 2022
+   extract); 2,417 of the 2,503 old rows dated 2021 are kept.
+5. Duplicate expenditure IDs in an extract are one row per supported candidate and are kept. Offset rows and
+   `Amended = "Y"` rows kept as published; 0 rows dropped as superseded.

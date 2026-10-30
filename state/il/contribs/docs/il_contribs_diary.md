@@ -1256,3 +1256,44 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-12 (re-read with the correct encoding 2026-10-13) for The Accountability Project (Claude, for Jacob
+Fenton); published 2026-10-15. The runnable script is [`code/il_contribs.R`](../code/il_contribs.R); the steps above
+are unchanged except as noted here. Output: 34 yearly files, `il_contribs_pre1994.csv` and `il_contribs_1994.csv`
+through `il_contribs_2026.csv`, 3,865,415 rows in all, the same 41 columns in the same order as the 2023 file._
+
+The source is the same State Board of Elections bulk download (`Receipts.txt`, downloaded 2026-10-11, 1.06 GB), with
+the recipient committee joined from `Committees.txt` as before. Changes to the recipe:
+
+1. **Superseded records are dropped** (decision, 2026-10-12). The board marks every line item of a report that was
+   replaced by an amendment `Archived = TRUE`. An amendment re-files the whole report, so keeping the archived rows
+   counts those items twice. 2,678,764 of the 6,544,179 records in the bulk file (41%) are archived and dropped;
+   3,865,415 current records are kept. (The 2023 build kept them.)
+2. **Encoding.** The bulk files (`Receipts.txt`, `Committees.txt`) are windows-1252, not UTF-8 (for example `0xe9`
+   for the é in "Café", `0x93`/`0x94` curly quotes). Every `read_delim()` now passes
+   `locale = locale(encoding = "windows-1252")`, so the output is valid UTF-8.
+3. **Broken lines.** The hand fixes in the Fix section above (specific line numbers in the 2021 file) no longer
+   apply. A small shell script, run before reading, joins continuation lines (19 in this file) and sets aside lines
+   with a stray tab (9 lines, 5 of them superseded records), so about 6 current contributions are not in this build.
+   That script is [`state/il/code/repair.sh`](../../code/repair.sh); the 9 lines it set aside (from the 2026-10-12 download)
+   are listed in `datacleaning_agents/ec2/il/box_2026-10-13/work/Receipts-rejects.txt`.
+4. **Duplicates** are flagged the same way (identical on every column except `id`, which includes the date) by
+   hashing each row rather than splitting by date. 65,925 rows (1.7%) are flagged; `na_flag` is 0 for every row.
+5. **One file per year.** The output is split by `rcv_year`; years before 1994 go into `il_contribs_pre1994.csv`.
+   That file holds 5 records with typo years (1903, 1989-1992), kept as filed, so the dataset's coverage is given as
+   1994-2026.
+
+``` r
+ilc <- read_delim(
+  file = "Receipts-fixed.txt", delim = "\t", quote = "", escape_backslash = FALSE,
+  escape_double = FALSE, trim_ws = TRUE, locale = locale(encoding = "windows-1252"),
+  col_types = cols(.default = col_character(), ID = col_integer(), CommitteeID = col_integer(),
+                   FiledDocID = col_integer(), RcvDate = col_datetime(), Amount = col_double(),
+                   AggregateAmount = col_double(), LoanAmount = col_double(), Archived = col_logical(),
+                   RedactionRequested = col_logical())
+)
+ilc <- clean_names(ilc, case = "snake")
+ilc <- filter(ilc, !coalesce(archived, FALSE))  # drop records superseded by an amendment
+```

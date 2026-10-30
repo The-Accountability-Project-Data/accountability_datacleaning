@@ -454,3 +454,48 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+The 2024 edition (`GPO-PLUMBOOK-2024`, issued 2024-11-12, data as of June 30, 2024) was added as a second file,
+`us_plum_book_2024.csv`, in the same dataset (370). It has the same 20 columns in the same order as
+`us_plum_book.csv`. This first file holds only the 2020 edition (every row is year 2020), not 2016–2020.
+The build script is [`code/us_plum_book_2024.R`](../code/us_plum_book_2024.R) (run 2026-10-28). It has
+8,085 rows.
+
+Source: `https://www.govinfo.gov/content/pkg/GPO-PLUMBOOK-2024.zip`, `xls/GPO-PLUMBOOK-2024-6..9.xlsx`, with the same
+four files and twelve headers as 2020. The 2024 spreadsheets differ from 2020 in these ways, and the steps above
+were changed:
+
+* `here::i_am()` must point at `national/plum_book/docs/us_plum_book.Rmd` (the diary moved from `us/`).
+* Every cell is padded with spaces, and empty cells are runs of spaces. Squish all columns and turn `""` into `NA`.
+* 2,968 rows are entirely blank and 179 are agency heading rows (agency and ID only, no title or incumbent).
+  Drop both by keeping rows with a title or an incumbent.
+* `expires` is text, not an Excel serial number. It comes either as `2024-10-10T00:00:00.000` or as `7/29/2026`.
+* The country in `location` is cut to four letters ("Brussels, Belg"). `location` is kept as published, and
+  `country` is expanded (Belg -> Belgium, Germ -> Germany, Puer -> Puerto Rico, etc.).
+* `tenure` is a bare number with no unit, where 2020 had "5 Years". `level_grade_or_pay` has no dollar
+  amounts. `org_name_level` is empty. `org_name` repeats the agency on top-level rows. All are kept as published.
+
+```{r update_2024, eval=FALSE}
+pb <- map_dfr(raw_xls, read_xlsx, .id = "src_file", col_types = "text") %>%
+  clean_names(case = "snake") %>%
+  relocate(src_file, .after = last_col()) %>%
+  mutate(across(-src_file, ~na_if(str_squish(.), ""))) %>%
+  filter(!is.na(title) | !is.na(name_of_incumbent)) %>%
+  mutate(
+    across(c(agcy_name, org_name), str_to_title),
+    expires = coalesce(
+      as.Date(str_sub(expires, 1, 10), format = "%Y-%m-%d"),
+      as.Date(expires, format = "%m/%d/%Y")
+    )
+  )
+# then flag_na / flag_dupes as above; date = ymd("2024-11-12"), year = 2024; location split as above, plus:
+country_4 <- c(Belg = "Belgium", Germ = "Germany", Puer = "Puerto Rico", Ital = "Italy", Swit = "Switzerland",
+               Japa = "Japan", Unit = "United Kingdom", Virg = "Virgin Islands", Aust = "Austria")
+pb <- mutate(pb, country = coalesce(unname(country_4[country]), country))
+```
+
+Later: OPM's PLUM Act site (`https://escs.opm.gov/escs-net/api/pbpub/download-data`, the "All Data (CSV)" link on
+opm.gov/about-us/open-government/plum-reporting/plum-data/) publishes current positions with incumbents' begin and
+vacate dates. It has a different layout and would be a separate dataset.

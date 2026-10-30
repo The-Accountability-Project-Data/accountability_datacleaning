@@ -551,3 +551,50 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-14 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
+script is [`code/chicago_contracts.R`](../code/chicago_contracts.R); the steps above are unchanged except as noted
+here. Output: `il-chicago_contracts_19930101-20261009.csv`, 186,219 rows, the same 25 columns in the same order._
+
+The source is the same city dataset the diary reads, [Contracts (`rsxa-ify5`)][rsxa], as a full export downloaded
+2026-10-14. (The dataset's recorded download URL, `xzkq-xp2w`, was the city's salaries dataset; it now points to
+`rsxa-ify5`.) The file replaces the 2023 one (`il-chicago_contracts_19930101-20230131.csv`, 160,928 rows) and covers
+approval dates from 1993-01-01 to 2026-10-09, with 21 rows that have no approval date (as before). New years:
+2023 has 8,187 rows (the 2023 file had only January, 1,096), 2024 6,608, 2025 7,776 and 2026 5,111.
+
+[rsxa]: https://data.cityofchicago.org/api/views/rsxa-ify5/rows.csv
+
+Changes to the recipe:
+
+1. **Read as standard CSV.** The diary's `escape_double = FALSE` kept doubled quotes as two characters, so the 2023
+   file has `3"" GOULD PUMPS` for `3" GOULD PUMPS` (about 930 source lines contain quotes). Doubled quotes are now
+   read as escapes.
+2. **Check the row count.** The export can fail partway: the first download on 2026-10-14 stopped after 164,720 rows
+   with a 500 "Internal error" message appended. The script checks the row count against the API's count (186,219).
+3. **campfin 1.0.11** from CRAN. The other steps are the same: `clean_names()`, `na_flag` (approval date,
+   department, award amount, vendor name; 10,637 rows), `dupe_flag` (all columns; 8 rows), amounts rounded to cents,
+   `approval_year` from the approval date, `dept_city`/`dept_state` = CHICAGO/IL, `zip_norm`.
+
+``` r
+api_count <- 186219   # https://data.cityofchicago.org/resource/rsxa-ify5.json?$select=count(*) on 2026-10-14
+chic <- read_csv(raw_csv, locale = locale(date_format = "%m/%d/%Y"), na = "",
+                 col_types = cols(.default = col_character(), `Start Date` = col_date(), `End Date` = col_date(),
+                                  `Approval Date` = col_date(), `Award Amount` = col_double()))
+stopifnot(nrow(problems(chic)) == 0, nrow(chic) == api_count)
+```
+
+Decisions (2026-10-14):
+
+* **Revisions are kept.** Each row is one revision of a contract (revision 0 is the award, then modifications), with
+  its own approval date and the amount of that modification (negative when scope is removed, per the portal). They
+  add up; none replaces another, and the source has no amended flag, so no rows are dropped.
+* **Use what the city publishes.** 1,504 rows of the 2023 file are no longer in the source and are not carried over:
+  1,457 belong to contracts the city no longer publishes at all (626 Department of Health, 239 Family & Support
+  Services, 110 Human Services, among others; $385.6 million in award amounts), and 47 are revisions of contracts
+  that are still published but renumbered (for example, PO 21757's revisions 0-19 are now a single revision 30).
+* **The city's renames are kept.** Department names are now spelled out (DEPT OF AVIATION became CHICAGO
+  DEPARTMENT OF AVIATION on 10,560 rows). Note that DEPARTMENT OF HUMAN SERVICES now reads DEPARTMENT OF HUMAN
+  RESOURCES on 17,855 rows, which looks like a relabel at the source and may be wrong. Contract PDF links changed on
+  5,642 rows and addresses on 1,799.

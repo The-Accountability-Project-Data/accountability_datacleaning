@@ -1,0 +1,269 @@
+---
+title: "U.S. House Disbursements"
+author: "Claude (for Jacob Fenton)"
+date: "2026-10-13"
+output:
+  github_document:
+    df_print: tibble
+    toc: true
+    toc_dept: 2
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, purl=FALSE}
+library(knitr)
+opts_chunk$set(eval = TRUE, echo = TRUE, warning = FALSE, message = FALSE, error = FALSE, collapse = TRUE,
+               comment = "#>")
+```
+
+## Project
+
+The Accountability Project is an effort to cut across data silos and give journalists, policy professionals,
+activists, and the public at large a simple way to search across huge volumes of public data about people and
+organizations. Each dataset row is a transaction with (at least) its parties, a date and an amount.
+
+This diary builds TAP dataset 1, **U.S. House disbursements**: every payment from a House office (members,
+committees, leadership, officers) as published in the House's quarterly *Statement of Disbursements* (SOD).
+
+## History of the dataset
+
+* 2010–2017 came from ProPublica, which (after the Sunlight Foundation) converted the SOD PDFs to CSV and added
+  `BIOGUIDE_ID` to link member offices to members. ProPublica Represent and its Congress API were discontinued in
+  July 2024, so these files will not be updated.
+* The House Chief Administrative Officer publishes the SOD detail as CSV ("SOD DETAIL GRID") from Q1 2016:
+  <https://www.house.gov/the-house-explained/open-government/statement-of-disbursements> (current) and
+  `.../statement-of-disbursements/archive`.
+* This rebuild (October 2026) keeps ProPublica's 2010–2015 rows and rebuilds **2016 onward from the House CSVs**.
+  ProPublica's 2016 and 2017 files had rows shifted by one column (all of Q3–Q4 2017, about 10,000 rows of 2016):
+  ProPublica had mapped the House CSV by position and the `SORT SEQUENCE` column ("DETAIL") landed in `DATE`.
+
+## Output layout
+
+One file per calendar year, `house-disbursements_<year>.csv`, all with the same 21 columns. TAP's mapping for this
+dataset reads columns **by position**, so the first 15 are ProPublica's 2010–2016 columns in their original order.
+
+| # | column | House source (2016 on) |
+|---|---|---|
+| 1 | BIOGUIDE_ID | blank (not matched; vacant offices and members who died or resigned make it a project) |
+| 2 | OFFICE | `ORGANIZATION` without its year prefix |
+| 3 | QUARTER | from the file, e.g. `2018Q1` |
+| 4 | CATEGORY | `SORT SUBTOTAL DESCRIPTION` |
+| 5 | DATE | `TRANSACTION DATE`, as MM/DD/YYYY |
+| 6 | PAYEE | `VENDOR NAME` |
+| 7 | START DATE | `PERFORM START DT`, as MM/DD/YYYY |
+| 8 | END DATE | `PERFORM END DT`, as MM/DD/YYYY |
+| 9 | PURPOSE | `DESCRIPTION` |
+| 10 | AMOUNT | `AMOUNT` |
+| 11 | YEAR | the `ORGANIZATION` prefix: legislative year (`2026`) or `FISCAL YEAR 2026` |
+| 12 | TRANSCODE | `DATA SOURCE` (AP / GL / AR) |
+| 13 | TRANSCODELONG | spelled out as ProPublica did: Accounts payable / General ledger / Accounts receivable |
+| 14 | RECORDID | `DOCUMENT` |
+| 15 | RECIP (orig.) | `VENDOR NAME` |
+| 16 | PROGRAM | `PROGRAM` (blank in 2010–2015) |
+| 17 | ORGANIZATION CODE | from Q4 2022 |
+| 18 | PROGRAM CODE | from Q4 2022 |
+| 19 | BUDGET OBJECT CLASS | from Q4 2022 |
+| 20 | BUDGET OBJECT CODE | from Q4 2022 |
+| 21 | VENDOR ID | from Q4 2022 |
+
+The year shown in search comes from the file (one calendar year per file, by the quarter of the report), not from
+any column.
+
+## Packages
+
+```{r load_packages}
+suppressPackageStartupMessages({
+  library(readr); library(dplyr); library(stringr); library(purrr); library(fs); library(tibble)
+})
+```
+
+```{r dirs}
+base_dir <- here::here("national", "house_disbursements", "data")   # data/ is gitignored
+raw_dir <- dir_create(path(base_dir, "raw"))
+pp_dir <- dir_create(path(raw_dir, "propublica"))
+out_dir <- dir_create(path(base_dir, "clean"))
+```
+
+## Download
+
+The two SOD pages link every quarter's files. We keep the detail grids (not the summary grids) and name them by
+year and quarter. Requests use a browser user agent, one per second; files already downloaded are skipped.
+
+```{r download}
+ua <- "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+sod <- "https://www.house.gov/the-house-explained/open-government/statement-of-disbursements"
+pages <- map_chr(c(sod, paste0(sod, "/archive")), function(u) {
+  Sys.sleep(1); paste(readLines(url(u, headers = c("User-Agent" = ua)), warn = FALSE), collapse = "\n")
+})
+links <- unique(unlist(str_extract_all(pages, '(?<=href=")[^"]+\\.(csv|CSV)(?=")')))
+detail <- tibble(url = links[str_detect(toupper(links), "DETAIL")]) %>%
+  mutate(name = toupper(URLdecode(path_file(url))),
+         year = str_extract(name, "20\\d\\d"),
+         quarter = c(JAN = 1, APR = 2, JUL = 3, OCT = 4)[str_sub(name, 1, 3)],
+         file = path(raw_dir, sprintf("sod_detail_%sq%d.csv", year, quarter))) %>%
+  arrange(year, quarter)
+stopifnot(!anyDuplicated(detail$file), !anyNA(detail$quarter))
+nrow(detail)   # 42 quarters, Q1 2016 - Q2 2026, at the time of writing
+for (i in which(!file_exists(detail$file))) {
+  download.file(paste0("https://www.house.gov", detail$url[i]), detail$file[i], quiet = TRUE,
+                headers = c("User-Agent" = ua))
+  Sys.sleep(1)
+}
+```
+
+ProPublica's 2010–2015 files are TAP's archived copies, `s3://publicaccountability/csv_archive/house-disbursements_<year>.csv`
+(the 15-column versions), copied into `raw/propublica/` with the AWS CLI.
+
+## Read
+
+Two layouts: **12 columns** from Q1 2016 to Q3 2022 (some files add an empty 13th) and **18 columns** from Q4 2022
+(two files add an empty 19th; the new columns are the fiscal/legislative year, organization, program and budget
+object codes and the vendor ID). The `AMOUNT` header has trailing spaces. Encoding differs by quarter (in 2026, eight
+files were windows-1252 and the rest UTF-8), so it is detected per file. Each file has three kinds of rows
+(`SORT SEQUENCE`): `DETAIL`, `SUBTOTAL` and `GRAND TOTAL FOR ORGANIZATION`. Only `DETAIL` rows are kept; the grand
+totals are used below to check the result.
+
+```{r read_functions}
+pp_cols <- c("BIOGUIDE_ID", "OFFICE", "QUARTER", "CATEGORY", "DATE", "PAYEE", "START DATE", "END DATE", "PURPOSE",
+             "AMOUNT", "YEAR", "TRANSCODE", "TRANSCODELONG", "RECORDID", "RECIP (orig.)")
+new_cols <- c("PROGRAM", "ORGANIZATION CODE", "PROGRAM CODE", "BUDGET OBJECT CLASS", "BUDGET OBJECT CODE", "VENDOR ID")
+all_cols <- c(pp_cols, new_cols)
+transcode_long <- c(AP = "Accounts payable", GL = "General ledger", AR = "Accounts receivable")
+
+fix_names <- function(n) { n <- str_squish(n); blank <- n == ""; n[blank] <- paste0("BLANK_", which(blank)); n }
+
+read_sod <- function(f) {
+  enc <- if (validUTF8(rawToChar(read_file_raw(f)))) "UTF-8" else "windows-1252"
+  d <- read_csv(f, col_types = cols(.default = col_character()), na = character(), trim_ws = TRUE,
+                locale = locale(encoding = enc), name_repair = fix_names, progress = FALSE)
+  attr(d, "encoding") <- enc
+  d
+}
+```
+
+### Shifted rows
+
+In the files with an empty trailing column, a few Citi PCard credits carry a second vendor-name fragment
+(e.g. `AMZN MKTP US M79`) in its own field right after `VENDOR NAME`, pushing the rest of the row one column to the
+right; the amount lands in the trailing column. There were eight such rows in 2016–2026. They are repaired by
+folding the fragment into `VENDOR NAME` and shifting the rest of the row back; afterwards the trailing column must
+be empty everywhere.
+
+```{r shift_repair}
+repair_shifted <- function(d) {
+  blank <- grep("^BLANK_", names(d), value = TRUE)
+  if (length(blank) == 0) return(d)
+  shifted <- which(d[[blank[1]]] != "")
+  vi <- match("VENDOR NAME", names(d)); last <- match(blank[1], names(d))
+  for (i in shifted) {
+    v <- unlist(d[i, ], use.names = FALSE)
+    v[vi] <- str_squish(paste(v[vi], v[vi + 1]))
+    v[(vi + 1):(last - 1)] <- v[(vi + 2):last]; v[last] <- ""
+    d[i, ] <- as.list(v)
+  }
+  if (length(shifted) > 0) message(length(shifted), " shifted row(s) repaired: ",
+                                   paste(d$`VENDOR NAME`[shifted], collapse = " | "))
+  stopifnot(all(d[[blank[1]]] == ""))
+  d
+}
+```
+
+## Normalize
+
+Dates are `d-Mon-yy` (`14-Apr-26`) except in Q1 2019, which uses `dd-MON-yyyy`; both become MM/DD/YYYY. Values that
+are not dates are kept as filed (two typos: `22-AUG-1818`, `14-MAR-0026`).
+
+`ORGANIZATION` begins with the year the money belongs to: `2026 HON. JANE DOE` (legislative year) or
+`FISCAL YEAR 2026 SERGEANT AT ARMS`. As ProPublica did, the prefix goes to `YEAR` and the rest to `OFFICE`.
+Member offices left vacant appear as e.g. `HON. 13TH DISTRICT OF MICHIGAN`.
+
+```{r normalize}
+us_date <- function(x) {
+  d <- suppressWarnings(coalesce(
+    parse_date(if_else(str_detect(x, "-\\d{2}$"), x, NA_character_), "%d-%b-%y", na = "", locale = locale("en")),
+    parse_date(if_else(str_detect(x, "-\\d{4}$"), x, NA_character_), "%d-%b-%Y", na = "", locale = locale("en"))))
+  if_else(is.na(d), x, format(d, "%m/%d/%Y"))
+}
+
+to_tap <- function(d, quarter) {
+  for (c in setdiff(new_cols, names(d))) d[[c]] <- ""
+  pre <- str_match(d$ORGANIZATION, "^(FISCAL YEAR \\d{4}|\\d{4}) (.*)$")
+  tibble(
+    BIOGUIDE_ID = "", OFFICE = coalesce(pre[, 3], d$ORGANIZATION), QUARTER = quarter,
+    CATEGORY = d$`SORT SUBTOTAL DESCRIPTION`, DATE = us_date(d$`TRANSACTION DATE`), PAYEE = d$`VENDOR NAME`,
+    `START DATE` = us_date(d$`PERFORM START DT`), `END DATE` = us_date(d$`PERFORM END DT`),
+    PURPOSE = d$DESCRIPTION, AMOUNT = d$AMOUNT, YEAR = coalesce(pre[, 2], ""), TRANSCODE = d$`DATA SOURCE`,
+    TRANSCODELONG = unname(coalesce(transcode_long[d$`DATA SOURCE`], "")), RECORDID = d$DOCUMENT,
+    `RECIP (orig.)` = d$`VENDOR NAME`, PROGRAM = d$PROGRAM, `ORGANIZATION CODE` = d$`ORGANIZATION CODE`,
+    `PROGRAM CODE` = d$`PROGRAM CODE`, `BUDGET OBJECT CLASS` = d$`BUDGET OBJECT CLASS`,
+    `BUDGET OBJECT CODE` = d$`BUDGET OBJECT CODE`, `VENDOR ID` = d$`VENDOR ID`)
+}
+```
+
+## Build and check
+
+Each quarter's `DETAIL` amounts must add up to the sum of its `GRAND TOTAL FOR ORGANIZATION` rows (in 2026 they did,
+to the cent, for all 42 quarters, including the repaired rows).
+
+```{r build}
+sod_files <- dir_ls(raw_dir, regexp = "sod_detail_\\d{4}q\\d\\.csv$")
+quarters <- map_dfr(sod_files, function(f) {
+  q <- str_match(path_file(f), "sod_detail_(\\d{4})q(\\d)")
+  d <- repair_shifted(read_sod(f))
+  grand <- sum(parse_number(d$AMOUNT[d$`SORT SEQUENCE` == "GRAND TOTAL FOR ORGANIZATION"]))
+  det <- filter(d, `SORT SEQUENCE` == "DETAIL")
+  stopifnot(abs(sum(parse_number(det$AMOUNT)) - grand) < 0.005)
+  tibble(year = as.integer(q[2]), quarter = paste0(q[2], "Q", q[3]), encoding = attr(d, "encoding"),
+         rows = nrow(d), detail = nrow(det), data = list(to_tap(det, paste0(q[2], "Q", q[3]))))
+})
+select(quarters, -data)
+```
+
+## Export
+
+2010–2015: ProPublica's rows unchanged, with the six new columns blank. 2016 on: the House rows, one file per year.
+All files are written as UTF-8.
+
+```{r export}
+for (y in 2010:2015) {
+  d <- read_csv(path(pp_dir, sprintf("house-disbursements_%d.csv", y)), col_types = cols(.default = col_character()),
+                na = character(), trim_ws = FALSE, progress = FALSE)
+  stopifnot(identical(names(d), pp_cols))
+  for (c in new_cols) d[[c]] <- ""
+  write_csv(d[all_cols], path(out_dir, sprintf("house-disbursements_%d.csv", y)), na = "")
+}
+for (y in sort(unique(quarters$year))) {
+  d <- bind_rows(quarters$data[quarters$year == y])
+  stopifnot(identical(names(d), all_cols))
+  write_csv(d, path(out_dir, sprintf("house-disbursements_%d.csv", y)), na = "")
+}
+tibble(file = path_file(dir_ls(out_dir)), size = file_size(dir_ls(out_dir)))
+```
+
+## Results (October 2026 run)
+
+| file | rows | source |
+|---|---:|---|
+| 2010–2015 | 2,426,333 | ProPublica (unchanged) |
+| 2016 | 385,613 | House, 4 quarters |
+| 2017 | 393,578 | House, 4 quarters |
+| 2018 | 395,184 | House, 4 quarters |
+| 2019 | 445,253 | House, 4 quarters |
+| 2020 | 361,604 | House, 4 quarters |
+| 2021 | 387,907 | House, 4 quarters |
+| 2022 | 447,874 | House, 4 quarters |
+| 2023 | 492,229 | House, 4 quarters |
+| 2024 | 503,012 | House, 4 quarters |
+| 2025 | 472,546 | House, 4 quarters |
+| 2026 | 258,205 | House, Q1–Q2 |
+
+Checks: one header across all 17 files; every `AMOUNT` numeric; detail sums equal the House grand totals in all
+42 quarters; 2016 Q1–Q3 row counts equal ProPublica's exactly (amounts differ slightly because of ProPublica's
+shifted rows); all files valid UTF-8 (`datacleaning_agents/tools/verify_encoding.py`).
+
+## Updating
+
+Each new quarter appears on the SOD page a couple of months after it ends. Re-run this diary (it downloads only
+missing quarters) and replace the current year's file. Uploads and TAP records are done separately (see
+`datacleaning_agents/datasets/1-house-disbursements.md`).

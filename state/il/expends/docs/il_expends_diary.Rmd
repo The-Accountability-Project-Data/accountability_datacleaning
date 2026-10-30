@@ -837,3 +837,54 @@ dict_raw <- tibble(
   col.names = c("Column", "Original Name", "Type", "Definition")
 ))
 ```
+
+## Update: October 2026
+
+_Rebuilt 2026-10-12 (re-read with the correct encoding 2026-10-13) for The Accountability Project (Claude, for Jacob
+Fenton); published 2026-10-15. The runnable script is [`code/il_expends.R`](../code/il_expends.R). Output:
+`il_expends_clean.csv`, 3,391,996 rows, the 28 columns of the 2020 file in the same order plus 10 columns from the bulk
+file (38 columns)._
+
+**New source.** The 2020 file was built from hundreds of search-portal exports (25,000 records each). This build reads
+the State Board of Elections bulk download instead: `Expenditures.txt` (downloaded 2026-10-12, 784 MB), the same
+download page the contributions diary uses. The search export had report fields the bulk file lacks, so they are
+filled from two other bulk files:
+
+* `FiledDocs.txt` (joined on the filed document ID): `doc_name`, `election` (election type and year),
+  `report_begin`, `report_end`, `rpt_rcvd_date`.
+* `Committees.txt`: the spending `committee` name.
+* From the bulk file itself: `vendor` (first name + last/only name), `date`, `amount`, `purpose`, the vendor address,
+  `candidate`, `office_district`, `support` (Supporting/Opposing), and `type` from `D2Part` (6 Transfer Out,
+  7 Loan Made, 8 Expenditure, 9 Independent Expenditure). `beneficiary` is not in the bulk file and is left blank.
+* `file` is now always `Expenditures.txt`.
+* Appended after the 28 old columns: `id`, `filed_doc_id`, `e_trans_id`, `last_only_name`, `first_name`,
+  `aggregate_amount`, `d2part`, `country`, `redaction_requested`, `na_flag`.
+
+The Fix and Read steps above (quote replacement in the portal exports) are replaced by:
+
+1. **Superseded records are dropped** (decision, 2026-10-12). Every line item of a report replaced by an amendment is
+   marked `Archived = TRUE`; 1,476,380 of the 4,868,376 records (30%) are archived and dropped.
+2. **Encoding.** The bulk files are windows-1252, not UTF-8, and are read with
+   `locale = locale(encoding = "windows-1252")`.
+3. **Broken lines.** Before reading, continuation lines are joined and lines with a stray tab are set aside (2
+   expenditures are not in this build). That script is
+   [`state/il/code/repair.sh`](../../code/repair.sh); the 2 lines it set aside are listed in
+   `datacleaning_agents/ec2/il/box_2026-10-13/work/Expenditures-rejects.txt`.
+4. **Flags.** `na_flag` (missing date, vendor, amount or committee) is 0 for every row. `dupe_flag` marks rows
+   identical on every column except `id`: 77,730 rows (2.3%).
+5. **Years.** `year` comes from the expenditure date. A few typo years are kept as filed (1903 and some 1989-1998
+   dates); the dataset's coverage is given as 1999-2026.
+
+The address, ZIP, state and city normalization is the same as above.
+
+```{r update_2026_read, eval=FALSE}
+rd <- function(f, types) read_delim(f, delim = "\t", quote = "", escape_backslash = FALSE,
+  escape_double = FALSE, trim_ws = TRUE, col_types = types,
+  locale = locale(encoding = "windows-1252"))
+ile <- rd("Expenditures-fixed.txt",
+  cols(.default = col_character(), ID = col_integer(), CommitteeID = col_integer(), FiledDocID = col_integer(),
+       ExpendedDate = col_datetime(), Amount = col_double(), AggregateAmount = col_double(),
+       Archived = col_logical(), RedactionRequested = col_logical())) %>%
+  clean_names(case = "snake")
+ile <- filter(ile, !coalesce(archived, FALSE))  # drop records superseded by an amendment
+```

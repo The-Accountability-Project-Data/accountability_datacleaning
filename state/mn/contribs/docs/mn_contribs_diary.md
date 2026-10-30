@@ -96,6 +96,25 @@ feature and should be run as such. The project also uses the dynamic
 here::i_am("mn/contribs/docs/mn_contribs_diary.Rmd")
 ```
 
+## Update: October 2026
+
+Rebuilt 2026-10-28 (Claude, for the Accountability Project). See
+the script [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R) (with `mn_common.R`), which this diary now
+matches:
+
+* Same source link (`?download=-2113865252`, "Contributions received by all entities - 2015 to present"). It is
+  the full history, regenerated from the board's database on every download, so the whole file is rebuilt:
+  654,449 records, 2015-01-01 to 2026-10-19, UTF-8. Output `mn_contribs_2015-2026.csv` (same 19 columns).
+* `Receipt date` is now ISO (`YYYY-MM-DD`), not m/d/Y.
+* Reader: about 50 values contain backslash-quotes. See the Read section.
+* **`year` is now the calendar year of the receipt date**, not the source's report `Year` (457 rows differ).
+* There is no amendment flag. The board's database keeps only the current version of an amended report, so no
+  rows are dropped as superseded.
+
+_Note: this rendered copy was not re-knitted. The code shown below is from the previous build; the current
+steps are in [`mn_contribs_diary.Rmd`](mn_contribs_diary.Rmd) and [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R)._
+
+
 ## Data
 
 The data is obtained from the [Minnesota Campaign Finance Board

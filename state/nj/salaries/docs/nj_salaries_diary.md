@@ -497,3 +497,37 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: October 2026
+
+The dataset was rebuilt on 2026-10-14 from the full YourMoney Agency Payroll export
+(<https://data.nj.gov/Government-Finance/YourMoney-Agency-Payroll/iqwc-r2w7>, 2,842,265 rows, calendar years
+2010 through Q2 2026), replacing `nj_salaries_clean.csv` (2010–2019) with `nj_salaries_2010-2026.csv`. The script is
+[`code/nj_salaries.R`](../code/nj_salaries.R); it follows this diary with these changes:
+
+* `na_if("null")` on a whole data frame no longer works in dplyr 1.1+, so `"null"` is read as missing in `read_csv()`
+  (`na = c("", "null")`).
+* The `MASTER_YTD_*` pay columns are also made numeric.
+* The data dictionary and plots are skipped.
+
+**Hire dates are copied back from the previous file.** New Jersey publishes `ORIGINAL_EMPLOYMENT_DTE` only for the
+latest year in the export (in 2026, only 2026's rows have it), so each refresh blanks the hire dates of the year that
+used to be the latest. Our 2020 build had them for 2019 (70,961 MASTER rows). The 2026 build copies them back:
+MASTER rows only (the only rows that carry a hire date), matched on `CALENDAR_YEAR` + `PAYROLL_ID` + `RECORD_TYPE`,
+filling only blanks. All 70,961 were restored. The same step at the next refresh keeps 2026's dates:
+
+``` r
+hire <- read_csv("nj_salaries_2010-2026.csv", col_types = cols(.default = col_character())) %>%
+  filter(RECORD_TYPE == "MASTER", !is.na(ORIGINAL_EMPLOYMENT_DTE)) %>%
+  transmute(CALENDAR_YEAR = as.integer(CALENDAR_YEAR), PAYROLL_ID, RECORD_TYPE,
+            old_hire = as.Date(ORIGINAL_EMPLOYMENT_DTE)) %>%
+  distinct()
+njp <- njp %>%
+  left_join(hire, by = c("CALENDAR_YEAR", "PAYROLL_ID", "RECORD_TYPE"), relationship = "many-to-one") %>%
+  mutate(ORIGINAL_EMPLOYMENT_DTE = coalesce(ORIGINAL_EMPLOYMENT_DTE, old_hire)) %>%
+  select(-old_hire)
+```
+
+Compared with the 2020 file: 2010–2017 rows are identical; 2018 and 2019 gained a few rows (164,269 → 164,315 and
+164,509 → 164,536), and about 20,000 rows a year now have the department and section filled in where the old file
+had them blank or "NONE LISTED". There is no amended or superseded flag in the source.
