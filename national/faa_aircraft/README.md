@@ -44,6 +44,14 @@ type_aircraft, type_engine, status_code, mode_s_code, fract_owner, air_worth_dat
 
 Input and output sha256: input `86ed524d…f186`, output `a41c8a39…40ff`.
 
+## Earlier editions
+
+* 2023 (dataset 466, FAA Aircraft, `csv/aircraft_2023.csv`, 288,062 rows, data as of Feb. 15, 2023): built in Python
+  by Janelle O'Dea, [`../faa_pilots/faa-lic-py/`](../faa_pilots/faa-lic-py/faa_lic_README.md). Same join of `MASTER`
+  and `ACFTREF`, as an inner join (aircraft without a model match left out). Padding was trimmed from name, street,
+  street2, city, state and mfr only. `uszip5` is filled for `country` US; the code fills it with `00000` for other
+  countries. `year` is 2023.
+
 ## Updating
 
 Download the current `ReleasableAircraft.zip` and run `python build.py ReleasableAircraft.zip`; it writes

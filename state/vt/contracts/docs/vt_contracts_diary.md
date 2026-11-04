@@ -692,7 +692,7 @@ history, so this is a **full replacement** of both earlier files (`vt_contracts_
 2. **Grand-total line.** The export now ends with a total line (no quarter, department or vendor; $1,445,153,228.60).
    It is dropped.
 3. **One payment has no quarter** (Public Safety, Jiffy Lube, $58, new in the source). It is kept with `year` blank.
-   The `na_flag` column is not added, because the output must keep the old 19-column layout.
+   The `na_flag` column is not added; the output keeps the old 19-column layout.
 4. **Accented vendor names.** In 25 vendor names the current export has the replacement character (U+FFFD) where the
    old files had an accented letter ("Belle's Caf�" vs "Belle's Café"). They are restored from the old files
    when the vendor number matches and the name matches with each U+FFFD standing for one character.
@@ -704,8 +704,7 @@ history, so this is a **full replacement** of both earlier files (`vt_contracts_
 
 `dupe_flag` marks 2,101 rows (0.08%). Compared with the old files, every 2009-2022 row matches on quarter, department,
 unit, vendor number, vendor, state, department ID, account, account number, fund and amount, except one payment the
-state removed (2019-12-31, BizLibrary, $201,600). As decided for this update, we use what the state publishes, so it is
-not carried over.
+state removed (2019-12-31, BizLibrary, $201,600). It is not carried over.
 
 | Year | Old files | New file |
 |:-----|----------:|---------:|

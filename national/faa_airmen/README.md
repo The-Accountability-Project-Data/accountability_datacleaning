@@ -39,6 +39,14 @@ med_date, med_exp_date, basic_med_course_date, basic_med_cmec_date, airman_type,
 
 The output is ASCII. Input and output sha256: input `ae59aed8…5584a4`, output `e10b7ea2…44b9`.
 
+## Earlier editions
+
+* 2023 (dataset 463, FAA Pilots, `csv/pilots_2023.csv`, 957,444 rows): built in Python by Janelle O'Dea,
+  [`../faa_pilots/faa-pilots-py/`](../faa_pilots/faa-pilots-py/faa_pilots_README.md). Same two files stacked, without
+  `airman_type`. `med_date` was rewritten as `med_date_revised` (MM/YYYY) and `med_exp_date` written as a number.
+  `uszip5` is filled for `country` USA; the code fills it with `00000` for other countries. `year` is 2023.
+* 2021: [`../faa_pilots/docs/faa_pilots_basic.md`](../faa_pilots/docs/faa_pilots_basic.md) (`airmen_2021.csv`).
+
 ## Updating
 
 Download the current `CS<MM><YYYY>.zip` and run `python build.py CS<MM><YYYY>.zip`; it writes

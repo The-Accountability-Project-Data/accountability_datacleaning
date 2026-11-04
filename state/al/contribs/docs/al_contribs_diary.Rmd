@@ -820,7 +820,7 @@ fields in the same order as before.
 
 [dd26]: https://fcpa.alabamavotes.gov/page.request.do?page=page.acfPublicDownloadData
 
-Because every record ID was renumbered, the whole 2013-2026 history is rebuilt from the new files rather than
+Every record ID was renumbered at the source. The whole 2013-2026 history is rebuilt from the new files, not
 appended to the 2023 file. Changes to the recipe:
 
 1. **Files** are now `<year>_<Type>Extract1.csv` inside each zip. `source_file` keeps the old form

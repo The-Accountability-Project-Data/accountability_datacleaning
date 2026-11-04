@@ -995,7 +995,7 @@ zip_url <- "https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip"
 
 **Differences from the steps above:**
 
-1. **All source fields are kept.** The Trim step above kept 11 fields "for memory space" and never rejoined the rest.
+1. **All source fields are kept.** The Trim step above kept 11 fields.
    The rebuild keeps all 37: the 17 columns of the 2023 file come first, with the same names and order, then the 26
    restored source fields (contributor employer, occupation and job title, PAC FEIN, out-of-state PAC flag,
    contribution description, itemize and travel flags, report id, received date, form and schedule type, filer
@@ -1009,8 +1009,7 @@ zip_url <- "https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip"
 3. **Duplicates** use the 2023 definition: identical filer, contributor name and place, date and amount within the
    same report-received date, ignoring the contribution id. They are found in a first pass that hashes those fields
    across all files (`Rscript tx_contribs.R dupes`), then flagged in the cleaning pass
-   (`Rscript tx_contribs.R clean`). 1,998,816 rows (5.5%) are flagged. Flagging the same fields across all dates
-   instead flagged 19%, because it caught contributions repeated in amended reports.
+   (`Rscript tx_contribs.R clean`). 1,998,816 rows (5.5%) are flagged.
 4. `na_flag` (date, contributor name, amount, filer) flags 28,746 rows (0.08%). ZIP, state and city normalization
    (normalize, swap, refine) follow the steps above.
 

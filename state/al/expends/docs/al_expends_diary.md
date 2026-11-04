@@ -940,7 +940,7 @@ order as before.
 
 [dd26]: https://fcpa.alabamavotes.gov/page.request.do?page=page.acfPublicDownloadData
 
-Because every record ID was renumbered, the whole 2013-2026 history is rebuilt rather than appended. Changes:
+Every record ID was renumbered at the source. The whole 2013-2026 history is rebuilt, not appended. Changes:
 
 1. **Files** are now `<year>_ExpendituresExtract1.csv`; `source_file` keeps the old form
    (`2013_ExpendituresExtract.csv`).

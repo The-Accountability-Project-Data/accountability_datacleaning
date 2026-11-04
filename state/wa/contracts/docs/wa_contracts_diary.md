@@ -425,8 +425,8 @@ Contract) Sales Data by Customer, Contract, Vendor"), downloaded 2026-10-14 (por
 
 1. **No "Update" step.** The 2022 step above (keep 2021 onward, re-take 2020, then bind) is not needed.
 2. **Read** from the downloaded file rather than the URL; the column types are set on the cleaned names.
-3. Columns 12-14 (`vet_owned`, `small_business`, `diverse_options`) become logical with `across()`, since
-   `mutate_at(..., equals, "Y")` needs magrittr; a blank `omwbe` becomes `"N"`, as before.
+3. Columns 12-14 (`vet_owned`, `small_business`, `diverse_options`) become logical with `across()` instead of
+   `mutate_at(..., equals, "Y")`; a blank `omwbe` becomes `"N"`, as before.
 4. `amount` is the sum of the four quarterly sales (no quarter is blank).
 5. **Amendments.** The source has no amendment or superseded flag; nothing is dropped.
 
@@ -438,8 +438,8 @@ grows from 18,602 to 20,478 rows (the old file had only part of 2022); new years
 **The state now shows current names on past years.** About 3,900 old rows (2015-2021) no longer match by key, nearly
 all because the export shows the vendor's or customer's *current* name: 2,840 vendor renames (for example BUD CLARY
 AUTO DEALERSHIPS is now BUD CLARY CHEVROLET INC on 964 rows, and MAGNA5, LLC is RINGSQUARED TELECOM LLC on 327) and
-858 customer-name fixes (GR HARBOR COLLEGE is GRAYS HARBOR COLLEGE). As decided for this update, we use what the state
-publishes, so the old names for those years are no longer in the data.
+858 customer-name fixes (GR HARBOR COLLEGE is GRAYS HARBOR COLLEGE). The old names for those years are no longer in
+the data.
 
 ``` r
 wac <- read_csv("raw_n8q6-4twj.csv", name_repair = make_clean_names,

@@ -679,8 +679,8 @@ unname(aws_size == clean_size)
 
 ## Update: October 2026
 
-Rebuilt on 2026-10-28 as a new dataset, "Texas Licenses 2026" (the 2022 file, dataset 449, is left as it was: the
-source lists only current licenses, so replacing it would drop every license that has lapsed since). The script that
+Rebuilt on 2026-10-28 as a new dataset, "Texas Licenses 2026" (the 2022 file, dataset 449, is unchanged; the source
+lists only current licenses). The script that
 ran is [`code/tx_licenses.R`](../code/tx_licenses.R). Output: `tx_licenses_2025-2029.csv`, 1,010,756 rows, the same 28
 columns in the same order as `tx_licenses_2018-20220516.csv`.
 
@@ -690,18 +690,17 @@ pure ASCII). What changed and how the steps above were adjusted:
 1. **The file now has a header row and 23 columns:** the 19 listed in `lrformat.txt` plus four TDLR flag columns
    (`Same Address or not`, `Business Address that mentions BOX`, `Mailing address that mentions BOX`,
    `Phone-same or not`). The flags are dropped (decision, 2026-10-28). The 2022 mystery 20th column is gone, so the
-   `UNKOWN DATE` / `fix.csv` workaround is removed and `unkown_date` is written blank to keep the layout.
-2. **279 Boiler Inspectors rows have a 24th field** after the 19th. Their first 19 fields line up, so reading the
-   header's columns and keeping 1-19 is safe (readr drops the extra field and reports 279 problems).
+   `UNKOWN DATE` / `fix.csv` workaround is removed and `unkown_date` is written blank.
+2. **279 Boiler Inspectors rows have a 24th field** after the 19th. Their first 19 fields line up. The header's columns are read and
+   readr drops the extra field (279 problems reported).
 3. Expiration dates have a leading space (` 10/12/2027`); `trim_ws` handles it.
 4. **Year:** still the expiration year, but blank for the `01/01/1900` placeholder (652 Elevator Responsible Party
    rows; decision, 2026-10-28). 6 TDLR regional-office Boiler Authorized Inspection Agency rows expire `12/31/2099`
    and keep 2099; the file name uses 2025-2029.
-5. Rows with a blank `LICENSE TYPE` (49,795) are kept as published. Note 31,135 of them are exact copies of a
+5. Rows with a blank `LICENSE TYPE` (49,795) are kept as published. 31,135 of them are exact copies of a
    `Class A Barber` row (same number, name, subtype `BA`) apart from the blank type.
 6. `mutate(across(address_norm, na_if, ""))` becomes `across(address_norm, ~na_if(.x, ""))` (dplyr >= 1.1).
-7. The city refine is applied per row and checked against `zipcodes` directly instead of
-   `left_join(txl, good_refine)` on every column, which can duplicate rows; the rule is the same.
+7. The city refine is applied per row and checked against `zipcodes` directly instead of `left_join(txl, good_refine)` on every column. The refine rule is unchanged.
 8. `raw_dir` above points at `state/ct/...` (typo); the rebuild used its own work directory.
 
 ```{r update-2026-read, eval=FALSE}

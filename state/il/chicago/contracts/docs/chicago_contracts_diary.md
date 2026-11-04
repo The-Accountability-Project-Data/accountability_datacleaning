@@ -589,12 +589,12 @@ Decisions (2026-10-14):
 
 * **Revisions are kept.** Each row is one revision of a contract (revision 0 is the award, then modifications), with
   its own approval date and the amount of that modification (negative when scope is removed, per the portal). They
-  add up; none replaces another, and the source has no amended flag, so no rows are dropped.
+  add up; none replaces another. The source has no amended flag; no rows are dropped.
 * **Use what the city publishes.** 1,504 rows of the 2023 file are no longer in the source and are not carried over:
   1,457 belong to contracts the city no longer publishes at all (626 Department of Health, 239 Family & Support
   Services, 110 Human Services, among others; $385.6 million in award amounts), and 47 are revisions of contracts
   that are still published but renumbered (for example, PO 21757's revisions 0-19 are now a single revision 30).
 * **The city's renames are kept.** Department names are now spelled out (DEPT OF AVIATION became CHICAGO
-  DEPARTMENT OF AVIATION on 10,560 rows). Note that DEPARTMENT OF HUMAN SERVICES now reads DEPARTMENT OF HUMAN
-  RESOURCES on 17,855 rows, which looks like a relabel at the source and may be wrong. Contract PDF links changed on
+  DEPARTMENT OF AVIATION on 10,560 rows). DEPARTMENT OF HUMAN SERVICES now reads DEPARTMENT OF HUMAN
+  RESOURCES on 17,855 rows. Contract PDF links changed on
   5,642 rows and addresses on 1,799.

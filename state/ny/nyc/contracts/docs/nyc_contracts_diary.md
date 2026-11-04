@@ -514,11 +514,11 @@ and every row is an award notice. It replaces the 2020 file (35,089 rows, 2003 t
 
 Changes to the recipe:
 
-1. **Column types use the cleaned names** (`start_date`, not `StartDate`), because current `vroom` matches
-   `col_types` after name repair, and `col_date_mdy()` replaces the deprecated `col_date_usa()`. campfin 1.0.11 from
+1. **Column types use the cleaned names** (`start_date`, not `StartDate`); current `vroom` matches
+   `col_types` after name repair. `col_date_mdy()` replaces the deprecated `col_date_usa()`. campfin 1.0.11 from
    CRAN.
-2. **Fixed layout.** `remove_empty("cols")` made the columns depend on the data, and the dataset's mapping is by
-   position, so the output is pinned to the 2020 file's 28 columns, in order. Columns only in the new export are
+2. **Fixed layout.** `remove_empty("cols")` is replaced by a fixed column list: the output has the 2020
+   file's 28 columns, in order. Columns only in the new export are
    dropped: `email` (an agency contact, filled on 6,231 rows), `additional_desctription2` (3 rows) and 13 empty ones
    (`due_date`, `contact_fax`, `additional_description3`, `other_info2`/`3`, `printout3`, the `event_*` fields).
 3. Otherwise the same steps: the address is split into `addr`/`state`/`zip`, `agency_state` is "NY", `na_flag`
@@ -526,8 +526,7 @@ Changes to the recipe:
 
 **The city now publishes less of the vendor address.** For many notices the export has only the street ("1411
 Broadway"), sometimes a different one, with no city, state or ZIP: a state is found on 91% of the 2020 file's rows
-but on 55% of the new export, and on 3% of 2025-2026 notices. So that no address we had is lost, the 33,618 notices
-that were in the 2020 file keep that file's address fields (`vendor_address`, `addr`, `state`, `zip`), the address
+but on 55% of the new export, and on 3% of 2025-2026 notices. The 33,618 notices that were in the 2020 file keep that file's address fields (`vendor_address`, `addr`, `state`, `zip`), the address
 as first published: 5,758 of them regain a state, and 16,845 differ from today's text. Overall, state is filled on
 65% of rows and ZIP on 68%. Newer notices have what the city publishes.
 
