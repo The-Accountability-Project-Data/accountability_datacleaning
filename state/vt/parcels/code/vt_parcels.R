@@ -1,14 +1,12 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/410-vt-parcels/vt_parcels.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Vermont Parcels 2026, built 2026-10-28.
+# Follows state/vt/parcels/docs/vt_parcels_diary.Rmd (Kiernan Nicholls, 2021).
 #
-# Vermont Parcels 2026: a NEW dataset whose predecessor is 410 (Vermont parcels). Built 2026-10-28; 410 is untouched.
-# Follows accountability_datacleaning/state/vt/parcels/docs/vt_parcels_diary.Rmd (Kiernan Nicholls, 2021).
+#   Rscript state/vt/parcels/code/vt_parcels.R   # from the repo root
 #
-# Input: work/410-vt-parcels/raw/2026-10-28/vt_parcels_hubv1_2026-10-28.csv
+# Input: state/vt/parcels/data/raw/vt_parcels_hubv1_2026-10-28.csv
+#   (and the 2021 file in data/old/vt_parcels_2017-20211011.csv; output in data/clean/)
 #   - A fresh ArcGIS Hub v1 CSV export of the VCGI layer FS_VCGI_OPENDATA_Cadastral_VTPARCELS_poly_standardized_parcels_SP_v1/0.
 #   - The diary's Hub v3 URL now serves a stale 2022 cache, so it is not used.
-#   - See datasets/410-vt-parcels.md and retrievals.jsonl.
 #
 # Output: one row per published record, with exactly the 63 columns of csv/vt_parcels_2017-20211011.csv, in the same order.
 #
@@ -18,7 +16,7 @@
 #   - Read with readr's default quote escaping (escape_double = TRUE). The diary's escape_double = FALSE misparses the 28
 #     lines with "" inside quoted fields. All columns are read as character and trim_ws = FALSE, so values stay exactly
 #     as published (no float artifacts, leading zeros kept).
-#   - CAT: the source now publishes codes (R1, M, MHL, ...). User decision 2026-10-28: map them back to the 2021 labels.
+#   - CAT: the source now publishes codes (R1, M, MHL, ...). They are mapped back to the 2021 labels.
 #     The code-to-label pairs come from the old file, joined on SPAN, and must agree with the fixed table below. A code
 #     with no label stops the build.
 #   - The Google check_city() step is removed (no API calls). In the diary it only extended the list of known-valid
@@ -26,19 +24,18 @@
 #     (zipcodes) -> refine (refinr), all offline with campfin's data.
 #   - The refine join uses objectid, which is unique, instead of all columns. The result is the same and the join is faster.
 #   - Shapes come out as shape_length then shape_area (the 2021 order). The v1 export has Shape__Area first.
-#   - Kept as the agency published it: road, rail, trail and water rows with no owner (user, 2026-10-28), YEAR 0 rows,
+#   - Kept as the agency published it: road, rail, trail and water rows with no owner, YEAR 0 rows,
 #     and the lowercase rescode "c". No amended or superseded flag exists in this source.
-# year = the source's YEAR (the GIS / parcel-map year), as dataset 410 uses (user decision 2026-10-28).
+# year = the source's YEAR (the GIS / parcel-map year).
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(fs); library(jsonlite)
-  library(campfin); library(refinr); library(janitor)
+  library(campfin); library(refinr); library(janitor); library(here)
 })
 
-agents <- path_expand("~/uc_berkeley/datacleaning_agents")
-base <- path(agents, "work", "410-vt-parcels")
-raw_csv <- path(base, "raw", "2026-10-28", "vt_parcels_hubv1_2026-10-28.csv")
+base <- here("state", "vt", "parcels", "data")
+raw_csv <- path(base, "raw", "vt_parcels_hubv1_2026-10-28.csv")
 old_csv <- path(base, "old", "vt_parcels_2017-20211011.csv")
-out_dir <- dir_create(path(base, "out"))
+out_dir <- dir_create(path(base, "clean"))
 
 # Layer field names, in order. These are the same as the layer's ?f=json on 2026-10-28 and the 2021 dictionary.
 field_names <- c("OBJECTID", "SPAN", "GLIST_SPAN", "MAPID", "PARCID", "PROPTYPE", "YEAR", "GLYEAR", "TOWN", "TNAME",
@@ -58,7 +55,7 @@ stopifnot(nrow(vtp) == 344138, ncol(vtp) == 57, nrow(problems(vtp)) == 0)
 vtp <- clean_names(vtp, case = "snake")   # shape__area -> shape_area, shape__length -> shape_length
 message("read ", format(nrow(vtp), big.mark = ","), " rows")
 
-# Category codes -> 2021 labels (user, 2026-10-28)
+# Category codes -> 2021 labels
 cat_labels <- c(R1 = "Residential-1", R2 = "Residential-2", M = "Miscellaneous", O = "Other", C = "Commercial",
                 MHL = "Mobile Home/la", MHU = "Mobile Home/un", S1 = "Seasonal-1", S2 = "Seasonal-2", W = "Woodland",
                 F = "Farm", CA = "Commercial Apt", I = "Industrial", UE = "Utilities Elec", UO = "Utilities Other")

@@ -1,17 +1,13 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/442-443-ne-campaign-finance/ne_expends.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Dataset 443, Nebraska campaign expenditures -- combined rebuild 2026-10-28 (NOT uploaded; would replace DataFile
-# 1857 ne_expends_19970101-20220401.csv). Run from the datacleaning_agents repo root:
-#   Rscript datasets/442-443-ne-campaign-finance/ne_expends.R
+# Nebraska campaign expenditures -- combined rebuild, October 2026 (replaces ne_expends_19970101-20220401.csv).
+#   Rscript state/ne/code/ne_expends.R from the repo root; put the 2021-2026 <year>_ExpenditureExtract.csv files in
+#   state/ne/expends/data/raw/ and ne_expends_19970101-20220401.csv in state/ne/expends/data/old/.
+#   Outputs go to state/ne/expends/data/clean/.
 #
 # Same design as ne_contribs.R (read its header):
-# - OLD ERA: the published 443 file ne_expends_19970101-20220401.csv (ne_expends_diary.Rmd: legacy forms B1D, B2B,
+# - OLD ERA: the published file ne_expends_19970101-20220401.csv (ne_expends_diary.Rmd: legacy forms B1D, B2B,
 #   B4B1 joined to A1), values unchanged, its 21 columns first in the same order.
-# - NEW ERA: all 6 yearly ExpenditureExtract files 2021-2026, following ne_expends_diary_after_2021.Rmd (built
-#   unpublished dataset 479): na_flag on (expenditure date, filer name, amount, payee last/org name), dupe_flag over
-#   all source columns, amount rounded to cents, year from the expenditure date, campfin address/zip/city
+# - NEW ERA: all 6 yearly ExpenditureExtract files 2021-2026, following ne_expends_diary_after_2021.Rmd: na_flag on
+#   (expenditure date, filer name, amount, payee last/org name), dupe_flag over all source columns, amount rounded to cents, year from the expenditure date, campfin address/zip/city
 #   normalization; state not cleaned (the diary: "needs not be cleaned") -> state_clean = State as published.
 #   Same reader changes as contributions (windows-1252, no stray-quote regex, CRLF in a value -> space, ISO dates).
 # - Shared columns: committee_id <- Org ID, committee_name <- Filer Name, committee_type <- Filer Type,
@@ -24,8 +20,10 @@
 # - 2021 overlap: old rows also in the new system are DROPPED (new copy kept); rule in match_overlap() (ne_common.R).
 # Superseded records: offset rows ("Offset due to update/delete of filed item") kept as published; Amended = Y kept;
 # 0 rows dropped as superseded.
-here::i_am("datasets/442-443-ne-campaign-finance/ne_expends.R")
-source(here::here("datasets", "442-443-ne-campaign-finance", "ne_common.R"))
+library(here)
+here::i_am("state/ne/code/ne_expends.R")
+ne_dataset <- "expends"
+source(here("state", "ne", "code", "ne_common.R"))
 
 # ---- new era ----
 rd <- read_all_years("Expenditure")

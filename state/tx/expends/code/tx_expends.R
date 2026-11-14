@@ -1,26 +1,23 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (ec2/tx/tx_expends.R): the script that built the October 2026 file.
-# It ran on the project's EC2 build box and reads/writes paths there (e.g. ~/tx/raw, ~/il/); point them at your
-# own raw and output folders before running it from here.
-#
-# Texas campaign expenditures (dataset 324): full rebuild from the TEC bulk zip, same columns as the 2023 file
-# (tx_expends_clean.csv, DataFile 1063), which dataset 324's index mapping reads. Follows accountability_datacleaning
-# state/tx/expends/docs/tx_expends_diary.Rmd step for step: read all expend_*.csv, the diary's renames, drop the empty
+# Texas campaign expenditures: full rebuild (October 2026) from the TEC bulk zip, same columns as the 2023 file
+# (tx_expends_clean.csv). Raw and output folders are state/tx/expends/data/raw and data/clean (set below): put the
+# expend_*.csv files from the TEC bulk zip in data/raw/. Follows state/tx/expends/docs/tx_expends_diary.Rmd step for step: read all expend_*.csv, the diary's renames, drop the empty
 # columns, Y/N flags -> logical, na_flag (payee, date, amount, filer), dupe_flag (identical on every column except
 # id), year, campfin address/ZIP/state normalization and city norm/swap/refine.
 # Differences: duplicates are found by hashing each row instead of duplicated() on the whole table (same result, less
-# memory); output is one file, ~/tx/clean_expends/tx_expends_clean.csv.
-#   Rscript tx_expends.R
+# memory); output is one file, state/tx/expends/data/clean/tx_expends_clean.csv.
+#   Rscript state/tx/expends/code/tx_expends.R   # from the repo root
 suppressPackageStartupMessages({
   library(readr); library(vroom); library(dplyr); library(stringr); library(lubridate); library(janitor)
   library(campfin); library(refinr); library(fs); library(cli); library(scales); library(openssl); library(tidyr)
+  library(here)
 })
 # campfin::to_logical() (used by the 2023 diary) is gone from campfin 1.0.11: Y/N (and TRUE/FALSE) -> logical
 to_logical <- function(x) {
   x <- toupper(trimws(as.character(x)))
   ifelse(x %in% c("Y", "YES", "TRUE", "T"), TRUE, ifelse(x %in% c("N", "NO", "FALSE", "F"), FALSE, NA))
 }
-raw <- sort(dir_ls(path_expand("~/tx/raw"), regexp = "expend_\\d+\\.csv$"))
-out_dir <- dir_create(path_expand("~/tx/clean_expends"))
+raw <- sort(dir_ls(here("state", "tx", "expends", "data", "raw"), regexp = "expend_\\d+\\.csv$"))
+out_dir <- dir_create(here("state", "tx", "expends", "data", "clean"))
 cli_alert_info("{length(raw)} expenditure files")
 
 txe <- vroom(file = raw, .name_repair = make_clean_names, na = c("", "NA", "N/A", "UNKNOWN"), delim = ",",

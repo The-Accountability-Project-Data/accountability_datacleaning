@@ -5,25 +5,26 @@
 # https://lda.senate.gov/api/
 # Tue Jul 27 14:21:30 2021 ------------------------------------------------
 #
-# Revised Oct 2026 (Claude, for the datacleaning_agents effort):
+# Revised Oct 2026:
 #   * the API moved to https://lda.gov/api/v1/ (lda.senate.gov was sunset July 31, 2026)
 #   * pages are now capped at 25 records, and the API requires a filter to page past page 1, so this
 #     pages one filing_year at a time, ordered by dt_posted (filings posted mid-run land at the end)
-#   * one request at a time, at least DELAY seconds between requests (user's rule); API key required
+#   * one request at a time, at least DELAY seconds between requests; API key required
 #   * resumable: each page is saved as JSON the moment it arrives (write .part, then rename) and a restart
 #     continues after the last saved page
 #   * on HTTP 429 it waits out a short Retry-After once, otherwise stops; server errors retry 3 times with
-#     backoff, then stop -- it never hammers the API
-#   * every request is logged to data/json/<endpoint>/requests.csv
+#     backoff, then stop
+#   * every request is logged to data/raw/json/<endpoint>/requests.csv
 #   * also scrapes the contributions (LD-203) endpoint
 #
-# Rscript --vanilla national/lda_filings/scrape_lda_filings.R <filings|contributions> <year> [<year> ...]
-# LDA_API_KEY must be set in the environment (never put the key in this file).
+# Usage (from the repo root): Rscript national/lda_filings/scrape_lda_filings.R <filings|contributions> <year> [<year> ...]
+# LDA_API_KEY must be set in the environment.
 
 suppressPackageStartupMessages(library(httr))
 suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(cli))
 suppressPackageStartupMessages(library(fs))
+suppressPackageStartupMessages(library(here))
 
 `%||%` <- function(x, y) if (is.null(x)) y else x # base R has it only from 4.4
 
@@ -55,8 +56,9 @@ api_key <- Sys.getenv("LDA_API_KEY")
 if (!nzchar(api_key)) cli_quit("Set LDA_API_KEY in the environment")
 auth <- add_headers(Authorization = paste("Token", api_key))
 
-here_dir <- if (dir_exists("national/lda_filings")) "national/lda_filings" else "."
-out_root <- dir_create(path(here_dir, "data", "json", endpoint))
+here::i_am("national/lda_filings/scrape_lda_filings.R")
+here_dir <- here::here("national", "lda_filings")
+out_root <- dir_create(path(here_dir, "data", "raw", "json", endpoint))
 req_log <- path(out_root, "requests.csv")
 if (!file_exists(req_log)) {
   write("time_utc,url,status,n_results,seconds,note", req_log)

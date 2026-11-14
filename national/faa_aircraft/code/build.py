@@ -1,10 +1,9 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/faa-aircraft-2026/build.py): the script that built the October 2026 file.
-# It imports buildlib.py (copied alongside) from ../../tools in that repo; to run it from here, change that path to this folder.
-#
 """
 Build FAA Aircraft 2026 from the releasable aircraft registry zip.
 
-  .venv/bin/python datasets/faa-aircraft-2026/build.py work/faa-aircraft-2026/raw/2026-10-05/ReleasableAircraft.zip
+  python3 national/faa_aircraft/code/build.py [ReleasableAircraft.zip]
+
+The zip defaults to national/faa_aircraft/data/raw/ReleasableAircraft.zip (put the download there).
 
 - MASTER.txt (registered aircraft, with owners) joined to ACFTREF.txt (model reference) on the
   manufacturer/model code, as the 2023 dataset did: ACFTREF's columns first (its CODE named
@@ -14,18 +13,20 @@ Build FAA Aircraft 2026 from the releasable aircraft registry zip.
 - Strips the BOM, trims space padding from every value, drops the empty trailing columns.
 - Adds `uszip5` (first five digits of a US ZIP, blank otherwise) and `year` (the release year,
   2026 on every row).
-Writes work/faa-aircraft-2026/clean/aircraft_<release date>.csv and logs to builds.jsonl.
+Writes national/faa_aircraft/data/clean/aircraft_<release date>.csv and logs the build to
+national/faa_aircraft/data/builds.jsonl. Imports buildlib.py from this folder.
 """
 import csv
 import io
 import os
 import sys
 import zipfile
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tools'))
-from buildlib import HERE, log_build, now, rel, sha256, snake, uszip5  # noqa: E402
+from buildlib import log_build, now, rel, sha256, snake, uszip5
 
-DS_DIR = os.path.dirname(os.path.abspath(__file__))
+HERE = Path(__file__).resolve().parent
+DATA = HERE.parent / "data"
 
 
 def table(z, name):
@@ -37,7 +38,7 @@ def table(z, name):
 
 
 def main():
-    src = sys.argv[1]
+    src = sys.argv[1] if len(sys.argv) > 1 else str(DATA / 'raw' / 'ReleasableAircraft.zip')
     z = zipfile.ZipFile(src)
     stamp = max(i.date_time for i in z.infolist() if i.filename == 'MASTER.txt')
     release = '%04d-%02d-%02d' % stamp[:3]
@@ -50,7 +51,7 @@ def main():
     m_keep = [i for i in range(len(m_cols)) if i != key]
     header = ref_cols + [m_cols[i] for i in m_keep] + ['uszip5', 'year']
     zi, ci = m_cols.index('zip_code'), m_cols.index('country')
-    out_dir = os.path.join(HERE, 'work', 'faa-aircraft-2026', 'clean')
+    out_dir = str(DATA / 'clean')
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, 'aircraft_%s.csv' % release)
     started, n, unmatched = now(), 0, 0
@@ -65,8 +66,8 @@ def main():
             w.writerow(rr + [row[i] for i in m_keep] + [uszip5(row[zi], row[ci]), year])
             n += 1
     os.replace(out + '.part', out)
-    log_build(DS_DIR, {
-        'built_at': started, 'finished_at': now(), 'tool': 'datasets/faa-aircraft-2026/build.py',
+    log_build(str(DATA), {
+        'built_at': started, 'finished_at': now(), 'tool': 'national/faa_aircraft/code/build.py',
         'input': {'path': rel(src), 'sha256': sha256(src), 'release': release},
         'output': {'path': rel(out), 'sha256': sha256(out), 'bytes': os.path.getsize(out),
                    'rows': n, 'columns': len(header)},

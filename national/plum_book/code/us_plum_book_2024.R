@@ -1,35 +1,35 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/370-plum-book/us_plum_book_2024.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Dataset 370, United States Plum Book -- 2024 edition, built 2026-10-28 as a SECOND DataFile for 370 (user approved).
-# Follows accountability_datacleaning/national/plum_book/docs/us_plum_book.Rmd (2021, 2020 edition only):
+# United States Plum Book -- 2024 edition, built 2026-10-28.
+# Usage: Rscript national/plum_book/code/us_plum_book_2024.R from the repo root.
+# Reads national/plum_book/data/raw/GPO-PLUMBOOK-2024.zip (from GPO; unzipped to data/raw/x2024/) and
+# writes national/plum_book/data/clean/us_plum_book_2024.csv.
+# Follows national/plum_book/docs/us_plum_book.Rmd (2021, 2020 edition only):
 # stack the 4 xlsx in GPO-PLUMBOOK-2024.zip xls/ as text, clean_names, title-case agcy_name/org_name, parse expires,
 # flag_na / flag_dupes, date = publication date (2024-11-12, mods.xml dateIssued), year = 2024, split location.
 # Output has exactly the 20 columns, in order, of the 2020 file csv/us_plum_book.csv.
 # Changes from the diary (2024 xlsx differ from 2020):
 #  - every cell is space-padded (empty cells are runs of spaces): str_squish + "" -> NA on all columns;
 #  - 2,968 all-blank rows (padding, mostly at the end of -9.xlsx) and 179 agency heading rows (agency + ID only,
-#    no title and no incumbent) are dropped (user, 2026-10-28);
+#    no title and no incumbent) are dropped;
 #  - expires is text, "2024-10-10T00:00:00.000" or "7/29/2026", not an Excel serial: parse both forms;
 #  - `country` expanded from the source's 4-letter truncations (Belg -> Belgium, ...); `location` kept as published;
 #  - tenure (bare numbers, no unit; 2020 had "5 Years"/"36 Months") and level_grade_or_pay (no dollar amounts in 2024)
 #    are kept as published -- units can't be inferred;
-#  - paths are this repo's work dir instead of here("us", "plum_book", ...); plots skipped.
+#  - paths are under national/plum_book/data/ (raw/ and clean/); plots skipped.
 # No superseded/amended flag in this source.
 suppressPackageStartupMessages({
   library(readxl); library(dplyr); library(readr); library(stringr); library(tidyr)
-  library(purrr); library(lubridate); library(janitor); library(campfin); library(fs)
+  library(purrr); library(lubridate); library(janitor); library(campfin); library(fs); library(here)
 })
+here::i_am("national/plum_book/code/us_plum_book_2024.R")
 
-base <- path_expand("~/uc_berkeley/datacleaning_agents/work/370-plum-book")
-xls_dir <- path(base, "x2024", "GPO-PLUMBOOK-2024", "xls")   # unzipped from raw/2026-10-28/GPO-PLUMBOOK-2024.zip
+base <- here("national", "plum_book", "data")
+xls_dir <- path(base, "raw", "x2024", "GPO-PLUMBOOK-2024", "xls")   # unzipped from raw/GPO-PLUMBOOK-2024.zip
 if (!dir_exists(xls_dir)) {
-  unzip(path(base, "raw", "2026-10-28", "GPO-PLUMBOOK-2024.zip"), exdir = path(base, "x2024"))
+  unzip(path(base, "raw", "GPO-PLUMBOOK-2024.zip"), exdir = path(base, "raw", "x2024"))
 }
 raw_xls <- dir_ls(xls_dir, glob = "*.xlsx")
 names(raw_xls) <- basename(raw_xls)
-out_path <- path(dir_create(path(base, "out")), "us_plum_book_2024.csv")
+out_path <- path(dir_create(path(base, "clean")), "us_plum_book_2024.csv")
 
 pb <- map_dfr(raw_xls, read_xlsx, .id = "src_file", col_types = "text")
 message("read ", nrow(pb), " sheet rows, ", ncol(pb), " columns")

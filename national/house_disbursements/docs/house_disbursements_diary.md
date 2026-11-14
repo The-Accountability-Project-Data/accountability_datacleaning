@@ -1,6 +1,6 @@
 U.S. House Disbursements
 ================
-Claude (for Jacob Fenton), 2026-10-13
+2026-10-13
 
 - [Project](#project)
 - [History of the dataset](#history-of-the-dataset)
@@ -20,29 +20,27 @@ The Accountability Project is an effort to cut across data silos and give journa
 activists, and the public at large a simple way to search across huge volumes of public data about people and
 organizations. Each dataset row is a transaction with (at least) its parties, a date and an amount.
 
-This diary builds TAP dataset 1, **U.S. House disbursements**: every payment from a House office (members,
+This diary builds **U.S. House disbursements**: every payment from a House office (members,
 committees, leadership, officers) as published in the House's quarterly *Statement of Disbursements* (SOD).
 
 ## History of the dataset
 
-* 2010–2017 came from ProPublica, which (after the Sunlight Foundation) converted the SOD PDFs to CSV and added
-  `BIOGUIDE_ID` to link member offices to members. ProPublica Represent and its Congress API were discontinued in
-  July 2024, so these files will not be updated.
+* 2010–2015 come from ProPublica, which (after the Sunlight Foundation) converted the SOD PDFs to CSV and added
+  `BIOGUIDE_ID` to link member offices to members. ProPublica stopped this work in July 2024.
 * The House Chief Administrative Officer publishes the SOD detail as CSV ("SOD DETAIL GRID") from Q1 2016:
   <https://www.house.gov/the-house-explained/open-government/statement-of-disbursements> (current) and
   `.../statement-of-disbursements/archive`.
-* This rebuild (October 2026) keeps ProPublica's 2010–2015 rows and rebuilds **2016 onward from the House CSVs**.
-  ProPublica's 2016 and 2017 files had rows shifted by one column (all of Q3–Q4 2017, about 10,000 rows of 2016):
-  ProPublica had mapped the House CSV by position and the `SORT SEQUENCE` column ("DETAIL") landed in `DATE`.
+* October 2026: **2016 onward is rebuilt from the House CSVs**, replacing ProPublica's 2016 and 2017 files, which
+  had rows shifted by one column (all of Q3–Q4 2017, about 10,000 rows of 2016).
 
 ## Output layout
 
-One file per calendar year, `house-disbursements_<year>.csv`, all with the same 21 columns. TAP's mapping for this
-dataset reads columns **by position**, so the first 15 are ProPublica's 2010–2016 columns in their original order.
+One file per calendar year, `house-disbursements_<year>.csv`, all with the same 21 columns. The first 15 are
+ProPublica's columns, in their original order (the search mapping reads columns by position).
 
 | # | column | House source (2016 on) |
 |---|---|---|
-| 1 | BIOGUIDE_ID | blank (not matched; vacant offices and members who died or resigned make it a project) |
+| 1 | BIOGUIDE_ID | blank (not matched to members) |
 | 2 | OFFICE | `ORGANIZATION` without its year prefix |
 | 3 | QUARTER | from the file, e.g. `2018Q1` |
 | 4 | CATEGORY | `SORT SUBTOTAL DESCRIPTION` |
@@ -64,8 +62,7 @@ dataset reads columns **by position**, so the first 15 are ProPublica's 2010–2
 | 20 | BUDGET OBJECT CODE | from Q4 2022 |
 | 21 | VENDOR ID | from Q4 2022 |
 
-The year shown in search comes from the file (one calendar year per file, by the quarter of the report), not from
-any column.
+The year shown in search is the file's calendar year (by the quarter of the report), not a column.
 
 ## Packages
 
@@ -86,8 +83,8 @@ out_dir <- dir_create(path(base_dir, "clean"))
 
 ## Download
 
-The two SOD pages link every quarter's files. We keep the detail grids (not the summary grids) and name them by
-year and quarter. Requests use a browser user agent, one per second; files already downloaded are skipped.
+The two SOD pages link every quarter's files. The detail grids (not the summary grids) are kept and named by year
+and quarter. Files already downloaded are skipped.
 
 
 ``` r
@@ -112,8 +109,7 @@ for (i in which(!file_exists(detail$file))) {
 }
 ```
 
-ProPublica's 2010–2015 files are TAP's archived copies, `s3://publicaccountability/csv_archive/house-disbursements_<year>.csv`
-(the 15-column versions), copied into `raw/propublica/` with the AWS CLI.
+ProPublica's 2010–2015 files (15 columns, `house-disbursements_<year>.csv`) go in `raw/propublica/`.
 
 ## Read
 
@@ -147,9 +143,8 @@ read_sod <- function(f) {
 
 In the files with an empty trailing column, a few Citi PCard credits carry a second vendor-name fragment
 (e.g. `AMZN MKTP US M79`) in its own field right after `VENDOR NAME`, pushing the rest of the row one column to the
-right; the amount lands in the trailing column. There were eight such rows in 2016–2026. They are repaired by
-folding the fragment into `VENDOR NAME` and shifting the rest of the row back; afterwards the trailing column must
-be empty everywhere.
+right; the amount lands in the trailing column. There are eight such rows in 2016–2026. The fragment is folded
+into `VENDOR NAME` and the rest of the row shifted back.
 
 
 ``` r
@@ -206,8 +201,8 @@ to_tap <- function(d, quarter) {
 
 ## Build and check
 
-Each quarter's `DETAIL` amounts must add up to the sum of its `GRAND TOTAL FOR ORGANIZATION` rows (in 2026 they did,
-to the cent, for all 42 quarters, including the repaired rows).
+Each quarter's `DETAIL` amounts must add up to the sum of its `GRAND TOTAL FOR ORGANIZATION` rows. They do, to the
+cent, in all 42 quarters.
 
 
 ``` r
@@ -265,10 +260,9 @@ tibble(file = path_file(dir_ls(out_dir)), size = file_size(dir_ls(out_dir)))
 
 Checks: one header across all 17 files; every `AMOUNT` numeric; detail sums equal the House grand totals in all
 42 quarters; 2016 Q1–Q3 row counts equal ProPublica's exactly (amounts differ slightly because of ProPublica's
-shifted rows); all files valid UTF-8 (`datacleaning_agents/tools/verify_encoding.py`).
+shifted rows); all files valid UTF-8.
 
 ## Updating
 
 Each new quarter appears on the SOD page a couple of months after it ends. Re-run this diary (it downloads only
-missing quarters) and replace the current year's file. Uploads and TAP records are done separately (see
-`datacleaning_agents/datasets/1-house-disbursements.md`).
+missing quarters) and replace the current year's file.

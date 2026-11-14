@@ -121,23 +121,20 @@ here::i_am("mn/expends/docs/mn_expends_diary.Rmd")
 
 ## Update: October 2026
 
-Rebuilt 2026-10-28 (Claude, for the Accountability Project). See
-the script [`state/mn/code/mn_expends.R`](../../code/mn_expends.R) (with `mn_common.R`), which this diary now
-matches:
+Rebuilt 2026-10-28. Script: [`state/mn/code/mn_expends.R`](../../code/mn_expends.R) (with `mn_common.R`).
 
-* Same source link (`?download=-1890073264`, "Expenditures, including contributions made, by all entities - 2015
-  to present"). It is the full history, regenerated on every download: 402,530 records, 2015-01-01 to 2026-10-19,
-  UTF-8. Output `mn_expends_2015-2026.csv` (same 26 columns as the previous file).
-* **The download no longer has `Vendor address 1` / `Vendor address 2`.** Decision (2026-10-28): do not backfill
-  them from the old file. The two columns are kept but blank, so `address_clean` is blank too. Vendor city, state
-  and ZIP are still published and normalised.
-* `Date` is now ISO. The reader now uses `escape_double = TRUE`; the old `FALSE` turned each `""` into two quotes
-  in the output. It also applies the backslash-quote fix described under Read.
-* The refined cities are now joined back on the city keys of distinct refinements. Joining on every column
-  duplicated fully-duplicated rows, which is how the 2022 run turned 260,873 records into 260,875.
-* Year is the calendar year of the date (unchanged). There is no amendment flag, so no rows are dropped as
-  superseded.
-* The export is named by years: `mn_expends_2015-2026.csv`.
+* Source: the same download (`?download=-1890073264`, "Expenditures, including contributions made, by all entities
+  - 2015 to present"), the full history, regenerated on every download: 402,530 records, 2015-01-01 to 2026-10-19,
+  UTF-8.
+* Output: `mn_expends_2015-2026.csv`, the same 26 columns as the previous file.
+* **`Vendor address 1` and `Vendor address 2` are no longer in the download.** They are not filled in from the old
+  file; the two columns are kept but blank, and so is `address_clean`. Vendor city, state and ZIP are still
+  published and normalized.
+* `Date` is now ISO. The reader uses `escape_double = TRUE` (the old `FALSE` turned each `""` into two quotes) and
+  the same backslash-quote fix as the contributions diary.
+* Refined cities are joined back on the city keys of distinct refinements. (The 2022 run joined on every column,
+  which duplicated rows and turned 260,873 records into 260,875.)
+* `year` is the calendar year of the date (unchanged). There is no amendment flag; no rows are dropped.
 
 ## Source
 
@@ -217,17 +214,25 @@ if (!file_exists(raw_csv)) {
 
 ## Read
 
+The download is standard CSV, where `""` escapes a quote. A few dozen values instead write a quote as a
+backslash-quote (`\"`), and others end with a literal backslash. A backslash-quote not followed by a comma or line
+break is read as an escaped quote: its quote is doubled before parsing. The backslash is kept, as published.
+
 ```{r raw-read}
+raw_txt <- read_file(raw_csv, locale = locale(encoding = "UTF-8"))
+raw_txt <- str_replace_all(raw_txt, '\\\\"(?![,\\r\\n])', '\\\\""')
 mne <- read_delim(
-  file = raw_csv,
+  file = I(raw_txt),
   delim = ",",
+  na = "",
+  trim_ws = FALSE,
   escape_backslash = FALSE,
-  escape_double = FALSE,
+  escape_double = TRUE,
   col_types = cols(
     .default = col_character(),
     `Amount` = col_double(),
     `Unpaid amount` = col_double(),
-    `Date` = col_date("%m/%d/%Y"),
+    `Date` = col_date("%Y-%m-%d"),
     `Year` = col_integer()
   )
 )

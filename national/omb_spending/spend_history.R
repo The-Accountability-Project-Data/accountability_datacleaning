@@ -8,7 +8,7 @@
 #   * kiernan@workshop.org
 #   * kiernann@protonmail.com
 #
-# Revised Oct 2026 (Claude, for the datacleaning_agents effort):
+# Revised Oct 2026:
 #   * paths follow the current repo layout (national/omb_spending/)
 #   * fixed: undefined `bulk_file`, missing lubridate, unzip of every zip on each pass,
 #     reading CSVs from a different folder than they were extracted to, and a "failed"
@@ -19,7 +19,7 @@
 #     spend_update.R, drops columns USAspending added since 2021, blank-fills any removed)
 #   * writes us_<contract|assist>-<prime|sub>_<FY>-<n>.csv to data/clean/ and appends the
 #     file mapping to spend_names.csv, like the 2021 run
-#   * stops before any upload
+#   * does not upload
 #   * optional third argument `assistance` or `contracts` downloads USAspending's
 #     pre-generated archive Full files (prime transactions only) instead of requesting
 #     a bulk download -- the bulk API was failing even on one-month requests in Oct 2026
@@ -407,6 +407,6 @@ for (i in seq_len(nrow(bulk_names))) {
   }
 }
 
-# stop before upload: uploads are done separately, when asked
+# no upload
 cli_alert_info("Done. Clean files are in {.path {clean_dir}}; nothing was uploaded.")
 quit(save = "no", status = 0)

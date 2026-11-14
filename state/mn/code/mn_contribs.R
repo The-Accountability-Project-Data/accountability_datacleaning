@@ -1,26 +1,25 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/369-417-mn-campaign-finance/mn_contribs.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Minnesota campaign contributions -- rebuild 2015-2026, October 2026 (replaces mn_contribs_clean.csv).
+#   Rscript state/mn/code/mn_contribs.R from the repo root; put the CFB download in state/mn/contribs/data/raw/ and the
+#   previous published mn_contribs_clean.csv in state/mn/contribs/data/old/; run reparse.py on the download first
+#   (see mn_common.R). Outputs go to state/mn/contribs/data/clean/.
 #
-# Dataset 369, Minnesota campaign contributions -- rebuild 2015-2026, 2026-10-28 (NOT uploaded; would replace DataFile
-# 1210 mn_contribs_clean.csv). Run from the datacleaning_agents repo root:
-#   Rscript datasets/369-417-mn-campaign-finance/mn_contribs.R
-#
-# Follows accountability_datacleaning state/mn/contribs/docs/mn_contribs_diary.Rmd ("Update: October 2026"):
+# Follows state/mn/contribs/docs/mn_contribs_diary.Rmd ("Update: October 2026"):
 # - Source: CFB "Contributions received by all entities - 2015 to present"
 #   (https://cfb.mn.gov/reports-and-data/self-help/data-downloads/campaign-finance/?download=-2113865252), retrieved
-#   2026-10-28 (retrievals.jsonl), UTF-8, full history regenerated from the board's database at each download.
+#   2026-10-28, UTF-8, full history regenerated from the board's database at each download.
 # - Changes from the 2023 run: Receipt date is now ISO (was m/d/Y); reader read_cfb() in mn_common.R (RFC quoting
-#   plus the export's backslash-quotes, kept as published -- see there); **year = calendar year of the receipt date** (user decision
-#   2026-10-28; the diary kept the source's report Year).
+#   plus the export's backslash-quotes, kept as published -- see there); year = calendar year of the receipt date
+#   (the diary kept the source's report Year).
 # - Unchanged: clean_names, receipt_date -> date, in_kind "Yes" -> TRUE, na_flag (date, contributor, amount,
 #   recipient), dupe_flag (all columns), ZIP -> city/state join (contrib_city_match / contrib_state_match). The
 #   source has no street address (never did).
 # - Output: same 19 columns, same order as the old file.
 # Superseded records: the download has no amendment flag; the board's database keeps only current versions of
 # amended reports, so 0 rows are dropped as superseded.
-here::i_am("datasets/369-417-mn-campaign-finance/mn_contribs.R")
-source(here::here("datasets", "369-417-mn-campaign-finance", "mn_common.R"))
+library(here)
+here::i_am("state/mn/code/mn_contribs.R")
+mn_dataset <- "contribs"
+source(here("state", "mn", "code", "mn_common.R"))
 raw_csv <- path(raw_dir, "download_-2113865252_contribs_all.csv")
 
 mnc <- read_cfb(raw_csv, expected_records = 654449, col_types = cols(

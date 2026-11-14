@@ -1,13 +1,16 @@
 """
 Split senate_disbursements_all.csv into one file per report for TAP (Accountability Project), adding a `year` column.
 
-  python3 build_tap_files.py [--out DIR]     # default ~/uc_berkeley/datacleaning_agents/work/senate-disbursements
+  python3 build_tap_files.py [--src senate_disbursements_all.csv] [--out DIR]
+
+--src defaults to senate_disbursements_all.csv in this folder (written by build_all_years.py); --out defaults to
+national/senate_disbursements/data/clean/.
 
 Each report covers six months: Apr-Sep of one year or Oct of one year to Mar of the next. The period is taken from
 the report's posting dates (1st percentile), so file names carry the calendar years, e.g.
 senate-disbursements_2025-2026_119-sdoc6.csv (Oct 2025 - Mar 2026) or senate-disbursements_2025_119-sdoc5.csv.
 
-year (the year TAP shows; user, 2026-10-13: from the funding year):
+year (the year TAP shows, from the funding year):
   - funding_year when it is a single fiscal year (2011, 2026);
   - otherwise (multi-year funds, written "1115" = FY2011-2015 through early 2021 and "2021-2025" after, or blank)
     the year of date_posted;
@@ -21,10 +24,14 @@ import argparse
 import collections
 import csv
 import os
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+DATA = HERE.parent.parent / "data"   # national/senate_disbursements/data (this script is in code/all_years/)
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--src', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'senate_disbursements_all.csv'))
-ap.add_argument('--out', default=os.path.expanduser('~/uc_berkeley/datacleaning_agents/work/senate-disbursements'))
+ap.add_argument('--src', default=str(HERE / 'senate_disbursements_all.csv'))
+ap.add_argument('--out', default=str(DATA / 'clean'))
 a = ap.parse_args()
 os.makedirs(a.out, exist_ok=True)
 

@@ -679,33 +679,30 @@ The following table describes the variables in our final exported file:
 
 ## Update: October 2026
 
-_Rebuilt 2026-10-14 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
-script is [`code/vt_contracts.R`](../code/vt_contracts.R); the steps above are unchanged except as noted here.
-Output: `vt_contracts_2009-2026.csv`, 2,588,461 rows, the same 19 columns in the same order._
+_Rebuilt 2026-10-14 with [`code/vt_contracts.R`](../code/vt_contracts.R); published 2026-10-15. The steps above
+are unchanged except as noted. Output: `vt_contracts_2009-2026.csv`, 2,588,461 rows, the same 19 columns in the same
+order._
 
-The source is still the Vermont Vendor Payments export (`786x-sbp3`, the same `rows.tsv` URL as above), downloaded
-2026-10-14: 2,588,462 lines, quarters ending 2009-09-30 to 2026-06-30 (portal updated 2026-07-08). It is the full
-history, so this is a **full replacement** of both earlier files (`vt_contracts_clean.csv`, 2009-2020, 1,680,169 rows;
-`vt_contracts_20200611-20230209.csv`, 2020-2022, 386,722 rows), not an append. Changes:
+The source is the Vermont Vendor Payments export (`786x-sbp3`, the same `rows.tsv` URL as above), downloaded
+2026-10-14 (portal updated 2026-07-08): quarters ending 2009-09-30 to 2026-06-30. It is the full history and replaces
+both earlier files (`vt_contracts_clean.csv`, 2009-2020, 1,680,169 rows; `vt_contracts_20200611-20230209.csv`,
+2020-2022, 386,722 rows). Changes:
 
-1. **No "Update" step.** The `anti_join()` against the old file above is not run; every row comes from the new export.
-2. **Grand-total line.** The export now ends with a total line (no quarter, department or vendor; $1,445,153,228.60).
-   It is dropped.
-3. **One payment has no quarter** (Public Safety, Jiffy Lube, $58, new in the source). It is kept with `year` blank.
-   The `na_flag` column is not added, because the output must keep the old 19-column layout.
-4. **Accented vendor names.** In 25 vendor names the current export has the replacement character (U+FFFD) where the
-   old files had an accented letter ("Belle's Caf�" vs "Belle's Café"). They are restored from the old files
-   when the vendor number matches and the name matches with each U+FFFD standing for one character.
-5. **Canadian provinces** are listed inline (AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT) instead of scraped
-   from the NCBI page.
-6. **Amounts** are rounded to cents; the old 2009-2020 file carried floating-point noise (283.97999999999996).
-7. **Amendments.** The source has no amendment or superseded flag; nothing is dropped.
+1. The "Update" step (the `anti_join()` against the old file) is not run.
+2. The export's closing grand-total line (no quarter, department or vendor; $1,445,153,228.60) is dropped.
+3. One payment has no quarter (Public Safety, Jiffy Lube, $58). It is kept with `year` blank. No `na_flag` column is
+   added.
+4. In 25 vendor names the export has the replacement character (U+FFFD) where the old files had an accented letter
+   ("Belle's Caf�" for "Belle's Café"). These are restored from the old files where the vendor number matches and
+   the name matches with each U+FFFD standing for one character.
+5. Canadian provinces are listed inline (AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT) instead of scraped from
+   the NCBI page.
+6. Amounts are rounded to cents (the old 2009-2020 file had values such as 283.97999999999996).
+7. The source has no amendment or superseded flag; nothing is dropped.
 8. `campfin` 1.0.11 from CRAN; no plots.
 
-`dupe_flag` marks 2,101 rows (0.08%). Compared with the old files, every 2009-2022 row matches on quarter, department,
-unit, vendor number, vendor, state, department ID, account, account number, fund and amount, except one payment the
-state removed (2019-12-31, BizLibrary, $201,600). As decided for this update, we use what the state publishes, so it is
-not carried over.
+`dupe_flag` marks 2,101 rows (0.08%). Every 2009-2022 row of the old files is in the new file except one payment
+the state removed (2019-12-31, BizLibrary, $201,600).
 
 | Year | Old files | New file |
 |:-----|----------:|---------:|

@@ -1,11 +1,8 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/464-chicago-contracts/chicago_contracts.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Dataset 464, Chicago Contracts — rebuild 2026-10-14 (user: work through Socrata group 1; NOT uploaded).
-# Follows accountability_datacleaning/state/il/chicago/contracts/docs/chicago_contracts_diary.Rmd (2023), with changes:
-#  - source: data.cityofchicago.org rsxa-ify5 "Contracts" full export (TAP's recorded downloadURL xzkq-xp2w is the
-#    city's salaries dataset; the diary itself already used rsxa-ify5). The export can fail mid-stream (2026-10-14: a
+# Chicago Contracts -- rebuild 2026-10-14.
+# Usage: Rscript state/il/chicago/contracts/code/chicago_contracts.R from the repo root.
+# Reads state/il/chicago/contracts/data/raw/rows.csv (the download) and writes state/il/chicago/contracts/data/clean/.
+# Follows state/il/chicago/contracts/docs/chicago_contracts_diary.Rmd (2023), with changes:
+#  - source: data.cityofchicago.org rsxa-ify5 "Contracts" full export (as in the diary). The export can fail mid-stream (2026-10-14: a
 #    500 "Internal error" JSON appended after 164,720 rows), so the record count is checked against the API count.
 #  - read as standard CSV (doubled quotes are escapes). The diary's escape_double = FALSE kept them doubled: in the
 #    2023 file 3" GOULD PUMPS reads 3"" GOULD PUMPS.
@@ -15,12 +12,13 @@
 # Revisions: each row is one contract revision (revision_number 0 = award, then modifications) with its own approval
 #  date and the amount of that modification (negative = scope removed, per the portal). They add up; none is
 #  superseded, and the source has no superseded/amended flag, so all rows are kept.
-# Output: work/464-chicago-contracts/clean/il-chicago_contracts_<first>-<last approval date>.csv, same 25 columns in
-#  the same order as the 2023 file (the mapping is positional).
+# Output: data/clean/il-chicago_contracts_<first>-<last approval date>.csv, same 25 columns in
+#  the same order as the 2023 file.
 suppressPackageStartupMessages({
-  library(readr); library(dplyr); library(stringr); library(lubridate); library(fs); library(janitor); library(campfin)
+  library(readr); library(dplyr); library(stringr); library(lubridate); library(fs); library(janitor); library(campfin); library(here)
 })
-work <- path_expand("~/uc_berkeley/datacleaning_agents/work/464-chicago-contracts")
+here::i_am("state/il/chicago/contracts/code/chicago_contracts.R")
+work <- here("state", "il", "chicago", "contracts", "data")
 raw_csv <- path(work, "raw", "rows.csv")
 api_count <- 186219   # https://data.cityofchicago.org/resource/rsxa-ify5.json?$select=count(*) on 2026-10-14
 

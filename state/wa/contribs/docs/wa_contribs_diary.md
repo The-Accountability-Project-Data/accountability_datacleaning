@@ -952,3 +952,83 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+_Updated 2026-11-05 with [`code/wa_contribs_2026.R`](../code/wa_contribs_2026.R); the steps above are unchanged
+except as noted. The dataset is now two files: `wa_contribs_2004-2021.csv` (5,474,675 rows, the same 42 columns in
+the same order as `wa_contribs_clean.csv`) and `wa_contribs_2022-2026.csv` (1,563,619 rows, the same 42 columns, then
+`fund_id` and `row_checksum`). Together they replace `wa_contribs_20040101-20210922.csv` and
+`wa_contribs_clean.csv`._
+
+### Source
+
+The same data.wa.gov dataset, [`kv7h-kjye`](https://data.wa.gov/d/kv7h-kjye), updated daily (rows updated 2026-11-05; 6,414,812 rows, election
+years 2007-2030). It holds about the last ten election years; 2007 and 2008 are mostly gone. Downloaded 2026-11-05
+from the SODA CSV endpoint, one file per election year
+(`https://data.wa.gov/resource/kv7h-kjye.csv?$where=election_year=<year>&$limit=5000000&$order=:id`, 24 files,
+2007-2030). UTF-8.
+
+### Changes to the recipe
+
+1. **Read** the 24 per-election-year CSVs, every column as text, `na = ""`, `trim_ws = FALSE`.
+2. **Dates.** `receipt_date` is an ISO datetime in the SODA CSV (`2024-08-22T00:00:00.000`); the date part is kept.
+3. **Amounts** are kept as published: `5000.00` (the 2022 file has `5000`).
+4. **Paths** use `here("state", "wa", "contribs", ...)`. The duplicate-id file is `dupe_ids_2022-2026.txt`, not
+   `here("il", "contribs", "data", "dupe_ids.txt")`.
+5. **Duplicates** are flagged within the new file: rows identical in every column except `id` (60,389 rows).
+6. **Refine join** uses explicit keys (`city_swap`, `state_norm`, `zip_norm`).
+7. **New columns** `fund_id` (the PDC campaign id) and `row_checksum` (blank in every source row) are at the end,
+   after `zip_clean`.
+
+### Cut at 2021-12-31
+
+- `wa_contribs_2004-2021.csv`: rows of `wa_contribs_clean.csv` with `receipt_date` on or before 2021-12-31
+  (5,475,736) or blank (2,018), minus 3,079 rows from since-amended reports: 5,474,675 rows. Values are unchanged.
+- `wa_contribs_2022-2026.csv`: source rows with `receipt_date` on or after 2022-01-01 (1,549,228), plus undated
+  source rows whose `id` is not in the first file (14,391): 1,563,619 rows. Receipt dates run 2022-01-01 to
+  2041-06-06 (15 rows dated after 2026). The two files share no `id`.
+- The 55,078 rows of `wa_contribs_20040101-20210922.csv` that are not in `wa_contribs_clean.csv` are not included.
+
+### Dropped: rows from amended reports
+
+The source removes a report's records when the report is amended. 3,079 rows ($503,305.41) of the first file are
+dropped as superseded: rows whose `id` and `report_number` are not in the current source, whose `election_year` is
+not 2008 or earlier, and whose `amount` is not blank or 0. By election year: 2013 1, 2015 1, 2016 5, 2018 705,
+2019 107, 2020 335, 2021 1,542, 2022 26, 2023 333, 2024 24.
+
+### Left out
+
+Source rows dated on or before 2021-12-31 that are not in `wa_contribs_clean.csv`: 12,651. By receipt year: 2021
+5,288; 2020 2,062; 2019 1,311; 2018 1,012; 2017 416; 2016 804; 2015 569; 2014 28; 2013 607; 2012 272; 2011 139;
+2010 92; 2008 2; 2007 1; 2006 5; 2005 31; 2004 5; years 0203, 0204, 1016 (2), 1024, 1941 and 2003, 1 each.
+
+### Kept: rows the source no longer publishes
+
+636,133 rows of `wa_contribs_2004-2021.csv`, all of election years 2007-2008, are no longer in the source. The other
+4,838,542 are.
+
+``` r
+soda_files <- dir_ls(here("state", "wa", "contribs", "data", "raw", "soda"), glob = "*/ey_*.csv")
+wac <- map_dfr(soda_files, read_csv, col_types = cols(.default = col_character()), na = "", trim_ws = FALSE)
+wac <- mutate(wac, receipt_date = str_sub(receipt_date, 1, 10))
+# old part: wa_contribs_clean.csv, all columns as text
+old <- read_csv(old_csv, col_types = cols(.default = col_character()), na = "", trim_ws = FALSE)
+old <- filter(old, is.na(receipt_date) | receipt_date <= "2021-12-31")
+ey <- suppressWarnings(as.integer(old$election_year))
+amt <- suppressWarnings(as.numeric(old$amount))
+superseded <- !(old$id %in% wac$id) & !(!is.na(ey) & ey > 0 & ey <= 2008) &
+  !(is.na(amt) | amt == 0) & !(old$report_number %in% wac$report_number)
+old <- old[!superseded, ]
+write_csv(old, path(clean_dir, "wa_contribs_2004-2021.csv"), na = "")
+# new part
+wac <- filter(wac, (!is.na(receipt_date) & receipt_date >= "2022-01-01") |
+  (is.na(receipt_date) & !(id %in% old$id)))
+wac <- mutate(wac, receipt_date = as_date(receipt_date))
+wac <- flag_na(wac, receipt_date, contributor_name, amount, filer_name)
+d <- select(wac, -id)
+wac$dupe_flag <- duplicated(d) | duplicated(d, fromLast = TRUE)
+# ... receipt_year, zip, state, city normalization as above, then:
+wac <- select(wac, all_of(names(old)), fund_id, row_checksum)
+write_csv(wac, path(clean_dir, "wa_contribs_2022-2026.csv"), na = "")
+```

@@ -1,25 +1,24 @@
 #!/usr/bin/env Rscript
 
 # Parse LDA contribution reports (LD-203) to CSV
-# Claude, Oct 2026, for the datacleaning_agents effort. Replaces lda_contribs_py/read_file.py, which parsed the
+# Oct 2026. Replaces lda_contribs_py/read_file.py, which parsed the
 # House XML downloads (disclosures.house.gov), a source that's gone; the same reports now come from
-# https://lda.gov/api/v1/contributions/ (scraped by scrape_lda_filings.R into data/json/contributions/<year>/).
+# https://lda.gov/api/v1/contributions/ (scraped by scrape_lda_filings.R into data/raw/json/contributions/<year>/).
 #
 # One row per contribution item, and only reports that list contributions -- as the old files did. The first
 # 22 columns keep the old files' names (lda_cols.csv, table "contributions"), filled from the matching API
 # fields; fields the old files didn't have are appended after them. Values are as published by the API, so a few
 # differ in form from the XML era:
 #   type          contribution_type_display  ("FECA", "Honorary Expenses", ...: same as before)
-#   date          MM/DD/YYYY                 (converted from the API's YYYY-MM-DD: dataset 2's mapping takes the
-#                                            year from the last 4 characters of date, fromdate / xYYYY)
+#   date          MM/DD/YYYY                 (converted from the API's YYYY-MM-DD, as the old files had it)
 #   filenum       filing_uuid                (was the House XML file number)
 #   source        "lda.gov API v1"           (was e.g. 2018_MidYear_XML)
 #   filerType     filer_type_display         ("Lobbyist" / "Organization"; was L / O)
 #   signedDate    dt_posted, UTC              (was the signed date in local time)
 #   amendment     "true" for MA / YA report types
-# Writes data/csv/lda_contributions_<year>.csv; a check row per year goes to data/csv/parse_check.csv. No upload.
+# Writes data/clean/lda_contributions_<year>.csv; a check row per year goes to data/clean/parse_check.csv.
 #
-# Rscript --vanilla national/lda_filings/parse_lda_contributions.R <year> [<year> ...]
+# Usage (from the repo root): Rscript national/lda_filings/parse_lda_contributions.R <year> [<year> ...]
 
 suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(dplyr))
@@ -27,10 +26,12 @@ suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(cli))
 suppressPackageStartupMessages(library(fs))
+suppressPackageStartupMessages(library(here))
 
-here_dir <- if (dir_exists("national/lda_filings")) "national/lda_filings" else "."
-json_root <- path(here_dir, "data", "json", "contributions")
-csv_dir <- dir_create(path(here_dir, "data", "csv"))
+here::i_am("national/lda_filings/parse_lda_contributions.R")
+here_dir <- here::here("national", "lda_filings")
+json_root <- path(here_dir, "data", "raw", "json", "contributions")
+csv_dir <- dir_create(path(here_dir, "data", "clean"))
 check_file <- path(csv_dir, "parse_check.csv")
 ref <- read_csv(path(here_dir, "lda_cols.csv"), col_types = cols(.default = col_character()))
 want <- ref$column[ref$table == "contributions"]

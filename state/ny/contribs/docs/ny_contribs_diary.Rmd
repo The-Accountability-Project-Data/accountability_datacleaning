@@ -1311,3 +1311,18 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+
+## Update: November 2026
+
+_Rebuilt 2026-11-10. Replaces the 2021 file. Output: `ny_contribs_1999-2026.csv`, 13,197,456 rows._
+
+- **Source:** the Board of Elections bulk disclosure files (Disclosure Report, all years) for State Candidate, State
+  Committee, County Candidate and County Committee, downloaded 2026-11-10, and the Filer Data file (`COMMCAND.CSV`).
+- **Rows:** schedules A-E (monetary contributions from individuals and partnerships, from corporations, from all other contributors; in-kind contributions; other receipts), in file order. The files hold one version of each report (`R_AMEND` marks an amended report).
+  Rows identical in every column are kept as published.
+- **Columns:** the 59 disclosure columns, named as in the BOE file format reference (`FILER_PREVIOUS_ID`,
+  `ELECTION_TYPE` and `COUNTY_DESC` as in the 2021 build; `COLUMN_59` is not in the reference); `SOURCE_FILE`; then
+  the filer record from `COMMCAND.CSV` joined on `FILER_ID`, prefixed `FILER_` or `TREASURER_`. Values as
+  published, stripped of surrounding spaces. No normalized columns are added.
+- **Encoding:** lines are UTF-8 except about 1,500 in Windows-1252, which are read as Windows-1252. Output is UTF-8.

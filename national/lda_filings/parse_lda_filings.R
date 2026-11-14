@@ -5,23 +5,23 @@
 # https://lda.senate.gov/api/
 # Fri Oct 29 13:41:24 2021 ------------------------------
 #
-# Revised Oct 2026 (Claude, for the datacleaning_agents effort):
+# Revised Oct 2026:
 #   * reads the per-filing-year JSON pages written by scrape_lda_filings.R
-#     (data/json/filings/<year>/page_*.json) and writes one file per table per filing year:
-#     data/csv/lda_<table>_<year>.csv
+#     (data/raw/json/filings/<year>/page_*.json) and writes one file per table per filing year:
+#     data/clean/lda_<table>_<year>.csv
 #   * the same five tables as before, built the same way (one row per filing; per filing x lobbyist with the
 #     issues collapsed; per conviction disclosure; per foreign entity; per affiliated organization)
 #   * columns follow lda_cols.csv (the headers of the Jan 2023 update files), in that order; fields the API
 #     has added since are appended at the end (sorted), so every year's file has the same header
 #   * values are as published; dt_posted is converted to UTC (2022-04-05T05:47:33Z), as the old files had it
-#   * no upload (the old version uploaded public-read); a check row per table/year goes to data/csv/parse_check.csv
+#   * a check row per table/year goes to data/clean/parse_check.csv
 #
 #   * a folder written with LDA_POSTED_AFTER (e.g. 2022_after_2023-01-11) is parsed to
 #     lda_<table>_2022_posted-after-20230111.csv
-#   * LDA_EXCLUDE_UUIDS=<file> (one filing_uuid per line): filings already in an older file are skipped, so they
-#     aren't loaded twice (2026-10-07: the 71,511 filings of the Jan 2023 update file)
+#   * LDA_EXCLUDE_UUIDS=<file> (one filing_uuid per line): filings listed in the file are skipped
+#     (e.g. filings already in an older file)
 #
-# Rscript --vanilla national/lda_filings/parse_lda_filings.R <year | year_after_yyyy-mm-dd> [...]
+# Usage (from the repo root): Rscript national/lda_filings/parse_lda_filings.R <year | year_after_yyyy-mm-dd> [...]
 
 suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(dplyr))
@@ -29,10 +29,12 @@ suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(cli))
 suppressPackageStartupMessages(library(fs))
+suppressPackageStartupMessages(library(here))
 
-here_dir <- if (dir_exists("national/lda_filings")) "national/lda_filings" else "."
-json_root <- path(here_dir, "data", "json", "filings")
-csv_dir <- dir_create(path(here_dir, "data", "csv"))
+here::i_am("national/lda_filings/parse_lda_filings.R")
+here_dir <- here::here("national", "lda_filings")
+json_root <- path(here_dir, "data", "raw", "json", "filings")
+csv_dir <- dir_create(path(here_dir, "data", "clean"))
 check_file <- path(csv_dir, "parse_check.csv")
 ref <- read_csv(path(here_dir, "lda_cols.csv"), col_types = cols(.default = col_character()))
 

@@ -1,18 +1,18 @@
 # Federal prime contracts and grants (USAspending)
 
-TAP datasets 375, **Federal Prime Contracts**, and 377, **Federal Prime Grants**: prime award transactions from
-<https://www.usaspending.gov/>. Updated October 2026. The sub-award datasets (374, 376) were not updated.
+**Federal Prime Contracts** and **Federal Prime Grants**: prime award transactions from
+<https://www.usaspending.gov/>. Updated October 2026. The sub-award datasets were not updated.
 
 ## Files
 
 One set of files per federal fiscal year (Oct. 1 to Sept. 30), split into parts of up to 1,000,000 rows:
-`us_contract-prime_<FY>-<n>.csv` (375) and `us_assist-prime_<FY>-<n>.csv` (377).
+`us_contract-prime_<FY>-<n>.csv` (contracts) and `us_assist-prime_<FY>-<n>.csv` (grants).
 
 * FY2001–FY2020 are the files built in 2021, unchanged.
 * FY2021–FY2026 were rebuilt in October 2026. They replace the partial FY2021 files and the date-range update files
-  (`_20210318-20210607` through `_20220405-20230104`), which are moved to `csv_archive/` on S3.
+  (`_20210318-20210607` through `_20220405-20230104`).
 
-| FY | Prime grants (377) | Parts | Prime contracts (375) | Parts |
+| FY | Prime grants | Parts | Prime contracts | Parts |
 |---|---:|---:|---:|---:|
 | 2021 | 20,637,065 | 21 | 6,405,488 | 7 |
 | 2022 | 8,811,266 | 9 | 6,668,009 | 7 |
@@ -43,8 +43,8 @@ with `recipient_uei` and `recipient_parent_uei` appended: 97 columns for grants,
   recipient and the place of performance.
 * Values are as published.
 
-The year shown in search is the calendar year of `action_date`. FY2001–FY2020 rows indexed before October 2026
-show the fiscal year.
+The year shown in search is the calendar year of `action_date`, except FY2001–FY2020 rows, which show the fiscal
+year.
 
 ## Code
 
@@ -57,10 +57,8 @@ Rscript --vanilla national/omb_spending/spend_history.R <first FY> <last FY> <as
 With `assistance` or `contracts` it downloads the archive file for each fiscal year, unzips it, aligns the
 columns, and writes `data/clean/us_<type>-prime_<FY>-<n>.csv`. It appends the file names to
 [`spend_names.csv`](spend_names.csv) and a row per file to `data/spend_check.csv` (rows, columns, action-date
-range). Without the third argument, it requests a bulk download from the API instead; in October 2026 those requests
-failed, for a full year and for one month. FY2021, FY2022 and all contract years were run on an EC2 box in
-us-east-1; the other grant years were run locally. [`spend_update.R`](spend_update.R) is the 2021 script for
-date-range updates and was not used.
+range). Without the third argument it requests a bulk download from the API instead (this failed in October 2026).
+[`spend_update.R`](spend_update.R) is the 2021 script for date-range updates.
 
 ## Updating
 

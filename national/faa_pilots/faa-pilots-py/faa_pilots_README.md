@@ -3,6 +3,8 @@ FAA Pilot Registration - Python
 Janelle O'Dea
 Friday January 31 2023
 
+> The 2026 edition is documented in [faa_airmen](../../faa_airmen/README.md).
+
 -   [Project](#project)
 -   [Objectives](#objectives)
 -   [Packages-setup](#packages-setup)

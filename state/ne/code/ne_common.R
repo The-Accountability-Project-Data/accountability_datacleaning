@@ -1,18 +1,17 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/442-443-ne-campaign-finance/ne_common.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Shared helpers for the Nebraska 442/443 combined rebuild (Oct 2026). Sourced by ne_contribs.R / ne_expends.R.
+# Shared helpers for the Nebraska campaign finance combined rebuild (Oct 2026). Sourced by ne_contribs.R / ne_expends.R,
+# which set `ne_dataset` ("contribs" or "expends") first. Paths are built with here() from the repo root: the NADC
+# yearly extracts in state/ne/<ne_dataset>/data/raw/, the previous published file in data/old/, outputs in data/clean/.
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(purrr); library(tidyr); library(lubridate)
   library(campfin); library(refinr); library(fs); library(here); library(tibble)
 })
 comma <- function(x) format(x, big.mark = ",", scientific = FALSE)
 
-base     <- here("work", "442-443-ne-campaign-finance")
-raw_dir  <- path(base, "raw", "2026-10-28", "csv")
+stopifnot(exists("ne_dataset"), ne_dataset %in% c("contribs", "expends"))
+base     <- here("state", "ne", ne_dataset, "data")
+raw_dir  <- path(base, "raw")
 old_dir  <- path(base, "old")
-out_dir  <- dir_create(path(base, "out"))
+out_dir  <- dir_create(path(base, "clean"))
 
 # Read one NADC e-filing extract (windows-1252, CRLF). Every field is wrapped in double quotes but quotes inside a
 # value are NOT escaped (2022 contributions, Receipt ID 1818: "7441 "O" STREET, SUITE 203"), and some values hold a

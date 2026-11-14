@@ -723,21 +723,18 @@ unname(aws_size == clean_size)
 
 ## Update: October 2026
 
-The file was rebuilt from the state's extract of 2020-01-16 (`Statewide Voter Extract 1-16-2020.csv`) on 2026-10-07
-with [`ms_voters_repair.R`](../ms_voters_repair.R) and published as `ms_voters_2020.csv` (3,423,601 rows, 58 columns),
-replacing `ms_voters_clean.csv`. The previous file had every record split over two lines: the extract's header ends
-with a trailing comma and the file has CRLF line endings, which left a line break in `WSD` and an extra blank column.
+Rebuilt 2026-10-07 from the state's extract of 2020-01-16 (`Statewide Voter Extract 1-16-2020.csv`) with
+[`ms_voters_repair.R`](../ms_voters_repair.R). Output: `ms_voters_2020.csv`, 3,423,601 rows, 58 columns, replacing
+`ms_voters_clean.csv`, which had every record split over two lines (the extract's header ends with a trailing comma
+and the file has CRLF line endings).
 
-The repair:
+* The extract is read without quoting, as above; all 58 columns are kept. `WSD` is blank in every row.
+* Columns are named as in the previous file (`EFFECTIVE_REGN_DATE` is `REGN_DATE`).
+* Whitespace is squished in every value (district codes were space-padded).
+* A double quote inside a value becomes an apostrophe (`O"KEEFE` becomes `O'KEEFE`).
+* Nothing else is changed; dates stay M/D/YYYY.
 
-* reads the extract without quoting, as above, and keeps its 58 columns; `WSD` is blank in every row;
-* names the columns as in the previous file (`EFFECTIVE_REGN_DATE` is `REGN_DATE`);
-* squishes whitespace in every value (district codes were space-padded);
-* turns a double quote inside a value into an apostrophe (`O"KEEFE` becomes `O'KEEFE`);
-* changes nothing else; dates stay M/D/YYYY.
+[`ms_voters_compare.py`](../ms_voters_compare.py) compares the output with the previous file.
 
-[`ms_voters_compare.py`](../ms_voters_compare.py) checks that every value matches the previous file once the same
-changes are applied to it.
-
-All 3,423,601 records in the extract are kept: active 1,918,095, purged 1,338,716, inactive 161,570, rejected 3,553
-and pending 1,667. `STATUS` tells them apart. 31 voter IDs appear twice in the source.
+All 3,423,601 records are kept: active 1,918,095, purged 1,338,716, inactive 161,570, rejected 3,553 and pending
+1,667, told apart by `STATUS`. 31 voter IDs appear twice in the source.

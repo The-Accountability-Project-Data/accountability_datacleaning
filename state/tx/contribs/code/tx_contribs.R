@@ -1,28 +1,27 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (ec2/tx/tx_contribs.R): the script that built the October 2026 file.
-# It ran on the project's EC2 build box and reads/writes paths there (e.g. ~/tx/raw, ~/il/); point them at your
-# own raw and output folders before running it from here.
-#
-# Texas campaign contributions (dataset 473): full rebuild from the TEC bulk zip, all years, split by year.
-# Adapted from accountability_datacleaning state/tx/contribs/docs/tx_clean.R + tx_contribs_diary.Rmd (Kiernan
-# Nicholls, 2021-23). Differences from 2023, at the user's request (2026-10-07/12):
-#   * keeps ALL 37 source fields (2023 trimmed to 11 "for memory space" and never rejoined them). The 17 columns of
-#     the current file (tx_contribs_clean.csv, DataFile 2001) come first, in the same order and with the same names,
-#     so dataset 473's index mapping still applies; the 26 restored source fields follow.
+# Texas campaign contributions: full rebuild (October 2026) from the TEC bulk zip, all years, split by year.
+# Raw, work and output folders are state/tx/contribs/data/raw, data/work and data/clean (set below): put the
+# contribs_*.csv files from the TEC bulk zip in data/raw/.
+# Adapted from state/tx/contribs/docs/tx_clean.R + tx_contribs_diary.Rmd (Kiernan Nicholls, 2021-23).
+# Differences from 2023:
+#   * keeps all 37 source fields (2023 kept 11). The 17 columns of the 2023 file (tx_contribs_clean.csv) come
+#     first, in the same order and with the same names; the 26 other source fields follow.
 #   * writes one file per contribution year (tx_contribs_<year>.csv); rows with no contribution date go to
 #     tx_contribs_undated.csv.
 # Same as 2023: snake_case names, Y/N flags -> TRUE/FALSE, na_flag (date, contributor name, amount, filer),
 # dupe_flag (same report-received date, filer, contributor name/place, date and amount, ignoring the contribution id), contribution_yr, campfin ZIP/state normalization and city norm/swap/refine.
 #
-#   Rscript tx_contribs.R dupes   # pass 1: duplicate contribution ids across all files -> work/dupes.txt
-#   Rscript tx_contribs.R clean   # pass 2: clean each file, append rows to clean/tx_contribs_<year>.csv
+# From the repo root:
+#   Rscript state/tx/contribs/code/tx_contribs.R dupes   # pass 1: duplicate contribution ids across all files -> data/work/dupes.txt
+#   Rscript state/tx/contribs/code/tx_contribs.R clean   # pass 2: clean each file, append rows to data/clean/tx_contribs_<year>.csv
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(lubridate); library(janitor)
   library(campfin); library(refinr); library(fs); library(cli); library(scales); library(openssl)
+  library(here)
 })
 mode <- commandArgs(trailingOnly = TRUE)[1]
-raw_dir   <- path_expand("~/tx/raw")
-work_dir  <- dir_create(path_expand("~/tx/work"))
-clean_dir <- dir_create(path_expand("~/tx/clean"))
+raw_dir   <- here("state", "tx", "contribs", "data", "raw")
+work_dir  <- dir_create(here("state", "tx", "contribs", "data", "work"))
+clean_dir <- dir_create(here("state", "tx", "contribs", "data", "clean"))
 raw_csv <- sort(dir_ls(raw_dir, regexp = "contribs_\\d+\\.csv$"))
 if (nzchar(Sys.getenv("TX_LIMIT"))) raw_csv <- head(raw_csv, as.integer(Sys.getenv("TX_LIMIT")))   # testing
 cli_alert_info("{length(raw_csv)} contribution files")

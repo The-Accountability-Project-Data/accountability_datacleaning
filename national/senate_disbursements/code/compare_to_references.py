@@ -1,5 +1,5 @@
 """
-Compare our parses with the earlier ones: the user's repo (2011-2015, repo_senate_data.csv, 11-column raw format) and
+Compare our parses with the earlier ones: the original senate disbursements repo (2011-2015, repo_senate_data.csv, 11-column raw format) and
 ProPublica's fork (2015-2017: propublica_senate_data.csv raw, or *_cleaned 16-column). For each report and mode:
 exact identical rows (raw format only), and rows matching on document no. / date posted / start / end / amount (the
 fields both formats share), with counts only in the reference ("ref-only") or only in ours ("ours-only").

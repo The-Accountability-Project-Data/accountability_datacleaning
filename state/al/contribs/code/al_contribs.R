@@ -1,11 +1,9 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/364-126-al-campaign-finance/al_contribs.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Alabama campaign contributions -- rebuild 2026-10-28 (replaces al_contribs_clean.csv).
+# Usage: Rscript state/al/contribs/code/al_contribs.R from the repo root.
+# Paths: reads the downloads in state/al/contribs/data/raw/csv/ and the 2023 file
+# state/al/contribs/data/old/al_contribs_clean.csv; writes state/al/contribs/data/clean/.
 #
-# Dataset 364, Alabama campaign contributions -- rebuild 2026-10-28 (replaces DataFile 1207, al_contribs_clean.csv).
-# Run from the repo root:  Rscript datasets/364-126-al-campaign-finance/al_contribs.R
-#
-# Follows accountability_datacleaning/state/al/contribs/docs/al_contribs_diary.Rmd (Kiernan Nicholls 2020,
+# Follows state/al/contribs/docs/al_contribs_diary.Rmd (Kiernan Nicholls 2020,
 # Aarushi Sahejpal 2023): stack the yearly Cash Contributions, In-Kind Contributions and Other Receipts files,
 # strip the type prefixes from the column names (SourceType -> ContributorType), source_file, amended Y -> TRUE,
 # drop the loan endorser columns, parse amount/date/filed_date, recipient = coalesce(committee_name, candidate_name),
@@ -14,8 +12,7 @@
 # (normal_city, zipcodes swap, refinr refine) -> *_clean. Output: the same 29 columns, same order, as the 2023 file.
 #
 # Changes from the diary (Oct 2026), because Alabama moved to a new system (Tyler "AL Campaign Finance System"):
-# - Source: page.request.do?page=getTransactionData&id=<id> per file, ids from the JSON download list (fetched by
-#   fetch_al.py; see sources.json). Every year 2013-2026 is regenerated nightly, so the whole history is rebuilt;
+# - Source: page.request.do?page=getTransactionData&id=<id> per file, ids from the system's JSON download list. Every year 2013-2026 is regenerated nightly, so the whole history is rebuilt;
 #   all record IDs were renumbered, so the old file can't be appended to.
 # - Files are now named <year>_<Type>Extract1.csv; source_file keeps the old form ("CashContributionsExtract.csv_2013").
 # - First column renamed OrgID -> CommitteeId; renamed back to org_id here.
@@ -25,25 +22,25 @@
 # - Read with quote = "" (no field is quoted, so a value like WILLIAM C. "BILL" THOMPSON is read as published). This
 #   replaces the diary's stray-quote regex, which only existed to stop readr treating those quotes as field quoting;
 #   the 2023 file also kept them as double quotes.
-# - Encoding: every 2026-10-28 source file is valid UTF-8 (tools/verify_encoding.py --guess), read as UTF-8.
+# - Encoding: every 2026-10-28 source file is valid UTF-8, read as UTF-8.
 # - The new Cash export repeats every in-kind contribution (same ID/committee/date/amount as the In-Kind file);
 #   those 44,156 cash-file copies are dropped (DROP_CASH_FILE_INKIND_COPIES) so in-kind gifts aren't counted twice.
 # - dplyr >= 1.1: across(amended, `==`, "Y") -> amended == "Y"; the refine join is by explicit keys.
 # - Plots, kable tables and the S3 upload are skipped.
 # Superseded records: the new system exports each report's current state. Amended = "Y" marks a record that was
 # filed on, or changed by, an amended report -- it is the current version, not a superseded one (no earlier-filed
-# twin exists for it; see datasets/364-126-al-campaign-finance.md). So no rows are dropped as superseded: 0 dropped.
+# twin exists for it). So no rows are dropped as superseded: 0 dropped.
 # The old system's "Offset due to deletion/update of filed item" contribution rows no longer appear.
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(purrr); library(tidyr); library(lubridate)
   library(janitor); library(campfin); library(refinr); library(fs); library(here)
 })
-here::i_am("datasets/364-126-al-campaign-finance/al_contribs.R")
+here::i_am("state/al/contribs/code/al_contribs.R")
 comma <- function(x) format(x, big.mark = ",")
 
-base <- here("work", "364-al-contribs")
-raw_dir <- path(base, "raw", "2026-10-28", "csv")
-out_dir <- dir_create(path(base, "out"))
+base <- here("state", "al", "contribs", "data")
+raw_dir <- path(base, "raw", "csv")
+out_dir <- dir_create(path(base, "clean"))
 old_cols <- names(read_csv(path(base, "old", "al_contribs_clean.csv"), n_max = 0, show_col_types = FALSE))
 types <- c("CashContributions", "InKindContributions", "OtherReceipts")
 raw_csv <- unlist(map(types, ~ sort(dir_ls(raw_dir, regexp = glue::glue("/\\d{{4}}_{.x}Extract1\\.csv$")))))

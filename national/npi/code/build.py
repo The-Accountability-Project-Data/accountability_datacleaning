@@ -1,11 +1,10 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/npi-2026/build.py): the script that built the 2026 file.
-# Output path follows that repo's layout (work/npi-2026/clean/); change it before running from here.
-#
 """
 Build the NPI 2026 CSV from the downloaded NPPES zip: drop deactivated NPIs and reduce
 330 columns to 80. No cleaning -- values are copied as-is.
 
-  .venv/bin/python datasets/npi-2026/build.py work/npi-2026/raw/2026-10-04/NPPES_Data_Dissemination_September_2026_V2.zip
+  python3 national/npi/code/build.py national/npi/data/raw/<NPPES_Data_Dissemination_<Month>_<Year>_V2.zip>
+
+Put the download in national/npi/data/raw/.
 
 Rows:    keep entity type 1 (individuals) and 2 (organizations). Deactivated NPIs have a
          blank entity type and carry only the NPI and deactivation date (no name or
@@ -19,8 +18,8 @@ Columns: all 55 single (non-repeating) columns, plus the first 5 of each special
 Year:    adds a final column `year`, set for every row to the year the data runs through
          (2026 for the Sept. 2026 file) -- this is a snapshot, so every row is that year.
 
-Writes   work/npi-2026/clean/npi_<data-through-date>.csv
-         datasets/npi-2026/builds.jsonl  (input/output sha256, counts, columns kept/dropped)
+Writes   national/npi/data/clean/npi_<data-through-date>.csv
+         national/npi/data/builds.jsonl  (input/output sha256, counts, columns kept/dropped)
 """
 import csv
 import hashlib
@@ -31,10 +30,12 @@ import re
 import sys
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 
-HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DS_DIR = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(HERE, 'work', 'npi-2026', 'clean')
+HERE = Path(__file__).resolve().parent
+DATA = HERE.parent / "data"
+DS_DIR = str(HERE.parent)                    # recorded paths are relative to the dataset folder
+OUT_DIR = str(DATA / 'clean')
 KEEP_SLOTS = 5
 BLOCKS = ('Healthcare Provider Taxonomy Code', 'Provider License Number', 'Provider License Number State Code',
           'Healthcare Provider Primary Taxonomy Switch', 'Healthcare Provider Taxonomy Group')
@@ -92,9 +93,9 @@ def main():
     rec = {
         'built_at': started.isoformat(timespec='seconds'),
         'finished_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-        'tool': 'datasets/npi-2026/build.py',
-        'input': {'path': os.path.relpath(src, HERE), 'sha256': sha256(src), 'member': main_name},
-        'output': {'path': os.path.relpath(out_path, HERE), 'sha256': sha256(out_path),
+        'tool': 'national/npi/code/build.py',
+        'input': {'path': os.path.relpath(src, DS_DIR), 'sha256': sha256(src), 'member': main_name},
+        'output': {'path': os.path.relpath(out_path, DS_DIR), 'sha256': sha256(out_path),
                    'bytes': os.path.getsize(out_path), 'rows': rows_out, 'columns': len(keep) + 1},
         'rows_in': rows_in,
         'rows_by_entity_type_in': by_type,
@@ -104,7 +105,7 @@ def main():
         'columns_added': {'year': through[0]},
         'columns_dropped_count': len(header) - len(keep),
     }
-    with open(os.path.join(DS_DIR, 'builds.jsonl'), 'a') as f:
+    with open(os.path.join(str(DATA), 'builds.jsonl'), 'a') as f:
         f.write(json.dumps(rec) + '\n')
     print("wrote %s: %s rows x %d columns (%s bytes); dropped %s rows, %d columns"
           % (rec['output']['path'], format(rows_out, ','), len(keep) + 1, format(rec['output']['bytes'], ','),

@@ -1,11 +1,9 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/364-126-al-campaign-finance/al_expends.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Alabama campaign expenditures -- rebuild 2026-10-28 (replaces al_expends_clean.csv).
+# Usage: Rscript state/al/expends/code/al_expends.R from the repo root.
+# Paths: reads the downloads in state/al/expends/data/raw/csv/ and the 2023 file
+# state/al/expends/data/old/al_expends_clean.csv; writes state/al/expends/data/clean/.
 #
-# Dataset 126, Alabama campaign expenditures -- rebuild 2026-10-28 (replaces DataFile 686, al_expends_clean.csv).
-# Run from the repo root:  Rscript datasets/364-126-al-campaign-finance/al_expends.R
-#
-# Follows accountability_datacleaning/state/al/expends/docs/al_expends_diary.Rmd (Kiernan Nicholls 2020,
+# Follows state/al/expends/docs/al_expends_diary.Rmd (Kiernan Nicholls 2020,
 # Aarushi Sahejpal 2023): stack the yearly Expenditures files, strip the "Expenditure" prefix from the column names,
 # amended Y -> TRUE, source_file = the CSV's name, parse amount/date/filed_date, committee =
 # coalesce(committee_name, candidate_name), flag_na (date, last_name, amount, committee; unflagged for Non-Itemized),
@@ -13,7 +11,7 @@
 # address/zip/state/city normalization -> *_clean. Output: the same 29 columns, same order, as the 2023 file.
 #
 # Changes from the diary (Oct 2026): the same as al_contribs.R -- new source (getTransactionData&id=<id>, ids from
-# the JSON list, fetched by fetch_al.py), whole 2013-2026 history rebuilt (IDs renumbered), files now named
+# the system's JSON download list), whole 2013-2026 history rebuilt (IDs renumbered), files now named
 # <year>_ExpendituresExtract1.csv (source_file keeps the old "2013_ExpendituresExtract.csv" form), CommitteeId ->
 # org_id, records split by raw line breaks re-joined (mostly multi-line Explanation values; every one re-joins to
 # exactly 20 fields or the build stops), read with quote = "" (files are unquoted; replaces the stray-quote regex),
@@ -21,17 +19,17 @@
 # Superseded records: Amended = "Y" marks a record filed on, or changed by, an amended report -- the current
 # version, not a superseded one -- so 0 rows are dropped as superseded. The old system's "Offset due to
 # deletion/update of filed item" rows (negative amounts, text in Explanation) are STILL in the 2013-2025 files
-# (8,416 rows; none in 2026). They are kept as published, as in the 2023 file (7,365 there); see the notes file.
+# (8,416 rows; none in 2026). They are kept as published, as in the 2023 file (7,365 there).
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(purrr); library(tidyr); library(lubridate)
   library(janitor); library(campfin); library(refinr); library(fs); library(here)
 })
-here::i_am("datasets/364-126-al-campaign-finance/al_expends.R")
+here::i_am("state/al/expends/code/al_expends.R")
 comma <- function(x) format(x, big.mark = ",")
 
-base <- here("work", "364-al-contribs")
-raw_dir <- path(base, "raw", "2026-10-28", "csv")
-out_dir <- dir_create(path(base, "out"))
+base <- here("state", "al", "expends", "data")
+raw_dir <- path(base, "raw", "csv")
+out_dir <- dir_create(path(base, "clean"))
 old_cols <- names(read_csv(path(base, "old", "al_expends_clean.csv"), n_max = 0, show_col_types = FALSE))
 raw_csv <- sort(dir_ls(raw_dir, regexp = "/\\d{4}_ExpendituresExtract1\\.csv$"))
 stopifnot(length(raw_csv) == length(2013:2026))

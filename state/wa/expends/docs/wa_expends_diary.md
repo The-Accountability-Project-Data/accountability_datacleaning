@@ -1151,3 +1151,58 @@ wa %>%
     na = ""
   )
 ```
+
+## Update: November 2026
+
+_Updated 2026-11-05 with [`code/wa_expends_2026.R`](../code/wa_expends_2026.R); the steps above are unchanged
+except as noted._
+
+The source is the same PDC dataset, "Expenditures by Candidates and Political Committees" on data.wa.gov
+([`tijg-9zyp`][tijg]; `ukxb-bc7h` is its API id), downloaded 2026-11-05 as the CSV export
+(`https://data.wa.gov/api/views/tijg-9zyp/rows.csv?accessType=DOWNLOAD&api_foundry=true`): 1,109,892 rows,
+33 columns, UTF-8. It covers about the last 10 years, with 7,300 rows for the 2007-2008 election cycles.
+
+[tijg]: https://data.wa.gov/d/tijg-9zyp
+
+The 2022 file (`wa_expends_clean.csv`, 1,028,427 rows) is cut at `expenditure_date` 2021-12-31. Two files, one
+header, no id in both:
+
+1. `wa_expends_2004-2021.csv`: rows of the 2022 file dated through 2021-12-31, plus its 356 undated rows. Values
+   unchanged; the same 37 columns in the same order. 957,267 rows.
+2. `wa_expends_2022-2026.csv`: source rows dated 2022-01-01 on (329,597), plus the one undated source row whose id
+   is not in the first file. Built with the steps above. 329,598 rows, 41 columns.
+
+Left out: 4,442 source rows dated through 2021 that are not in the 2022 file, by expenditure year: 2008 5,
+2010 30, 2011 56, 2012 36, 2013 108, 2014 34, 2015 147, 2016 214, 2017 91, 2018 399, 2019 387, 2020 969,
+2021 1,966. The 71,160 rows of the 2022 file dated 2022 or later are replaced by the second file.
+
+Kept: 181,415 rows of the first file are no longer in the source. By election year: 2007 35,137, 2008 80,451,
+2009 4,099, 2010 6,231, 2011 3,630, 2012 5,621, 2013 3,938, 2014 5,561, 2015 3,861, 2016 5,409, 2017 4,081,
+2018 5,951, 2019 4,648, 2020 6,155, 2021 5,411, 2022 1,000, 2023 74, 2024 141, 2025 15, 2026 1.
+
+Changes for the second file:
+
+1. **Read** from the CSV export, all columns as character, `na = ""`.
+2. **Dates** are MM/DD/YYYY, parsed with `mdy()`.
+3. **Location.** The source's `recipient_location` (`POINT (lon lat)`, as published) goes in
+   `recipient_location.coordinates`, which is blank in every row of the first file.
+4. **New columns** at the end: `fund_id`, `payee`, `creditor`, `row_checksum` (blank in the source).
+5. **Duplicates** are flagged within the second file, over every source column but `id`.
+6. **Column order** is the 2022 file's 37 columns, then the four new ones.
+7. Normalization runs on distinct values; the refine step joins on `city_swap`, state and ZIP. No plots.
+
+``` r
+wa <- read_csv(src_csv, col_types = cols(.default = col_character()), na = "", trim_ws = FALSE)
+wa <- wa %>%
+  mutate(
+    amount = parse_number(amount),
+    election_year = parse_number(election_year),
+    expenditure_date = mdy(expenditure_date)
+  )
+wa <- wa %>%
+  filter(expenditure_date >= as_date("2022-01-01") | (is.na(expenditure_date) & !id %in% old_part_ids))
+# ... flag_na, flag_dupes, year, address/zip/state/city as above ...
+wa <- wa %>%
+  rename(recipient_location.coordinates = recipient_location) %>%
+  select(all_of(old_cols), fund_id, payee, creditor, row_checksum)
+```

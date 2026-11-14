@@ -16,3 +16,26 @@ Run the script 'fix\_ny\_parcels.py'. (If the name of the input file is differen
 
 The raw file allows multiple owners and addresses per line, but we can only index one name per row. The script breaks lines with two owners into two individual lines. 
 
+
+
+## Update: November 2026
+
+New dataset "New York Parcels 2026", built 2026-11-05 from the 2025 assessment roll. The 2018 dataset is unchanged.
+
+* **Source:** `https://gisdata.ny.gov/GISData/State/Parcels/NYS-Tax-Parcel-Centroid-Points.gdb.zip`, linked from
+  <https://gis.ny.gov/parcels> (file geodatabase, Last-Modified 2026-10-16, retrieved 2026-11-05). Layer
+  `NYS_Tax_Parcels_Centroid_Points` in `NYS_2025_Tax_Parcels_Centroid_Points_2605.gdb`: 5,510,061 parcels in all 62
+  counties, `ROLL_YR` 2025. NYC parcels come from MapPLUTO and have no mailing address.
+* **Script:** [`code/build.py`](code/build.py) (Python). As in `fix_ny_output.py`, there is one row per owner:
+  `PRIMARY_OWNER` with the `MAIL_*` fields, and a second row for `ADD_OWNER` with the `ADD_MAIL_*` fields. `STATE` is
+  "NY".
+* **Columns:** the 40 columns of `ny_parcels_2018.csv`, in the same order, then the layer's other 27 fields: SWIS,
+  PRINT_KEY, SBL, CITYTOWN_SWIS, SCHOOL_CODE, SEWER_TYPE, SEWER_DESC, WATER_SUPPLY, WATER_DESC, UTILITIES,
+  UTILITIES_DESC, BLDG_STYLE, HEAT_TYPE, HEAT_TYPE_DESC, FUEL_TYPE, FUEL_TYPE_DESC, GFA, USED_AS_CODE, AG_DIST_CODE,
+  AG_DIST_NAME, SWIS_SBL_ID, SWIS_PRINT_KEY_ID, SPATIAL_YR, NYS_NAME, NYS_NAME_SOURCE, DUP_GEO, ORIG_FID.
+* **Data dictionary:** [`ny_parcels_dictionary.md`](ny_parcels_dictionary.md), from the state's
+  [field metadata](https://gis.ny.gov/current-parcel-centroid-metadata).
+* **Values** are as published: blanks for missing values, whole numbers without a decimal point, other numbers to 15
+  significant digits.
+* **Output:** `ny_parcels_2025.csv`, 7,158,491 rows (5,510,061 parcels, 1,648,430 second-owner rows), 67 columns,
+  UTF-8.

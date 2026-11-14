@@ -1,20 +1,16 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/442-443-ne-campaign-finance/ne_contribs.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Nebraska campaign contributions -- combined rebuild, October 2026 (replaces ne_contribs_19840101-20220329.csv).
+#   Rscript state/ne/code/ne_contribs.R from the repo root; put the 2021-2026 <year>_ContributionLoanExtract.csv
+#   files in state/ne/contribs/data/raw/ and ne_contribs_19840101-20220329.csv in state/ne/contribs/data/old/.
+#   Outputs go to state/ne/contribs/data/clean/.
 #
-# Dataset 442, Nebraska campaign contributions -- combined rebuild 2026-10-28 (NOT uploaded; would replace DataFile
-# 1856 ne_contribs_19840101-20220329.csv). Run from the datacleaning_agents repo root:
-#   Rscript datasets/442-443-ne-campaign-finance/ne_contribs.R
-#
-# One file for the whole range (user, 2026-10-28):
-# - OLD ERA (legacy paper/keyed system, nadc_data.zip, filings received 1984-2021): the published 442 file
-#   ne_contribs_19840101-20220329.csv (built by accountability_datacleaning/state/ne/contribs/docs/ne_contribs_diary.Rmd),
+# One file for the whole range:
+# - OLD ERA (legacy paper/keyed system, nadc_data.zip, filings received 1984-2021): the published file
+#   ne_contribs_19840101-20220329.csv (built by state/ne/contribs/docs/ne_contribs_diary.Rmd),
 #   taken AS PUBLISHED -- values unchanged, only re-laid-out into the combined header (its 26 columns first, same
-#   names and order, so the current 442 mapping keeps pointing at the same old-era data).
+#   names and order).
 # - NEW ERA (NADC e-filing, FirstTuesday PublicSite yearly extracts 2021-2026 by FILING year, frozen at each year end):
-#   rebuilt from all 12 current extracts following ne_contribs_diary_after_2021.Rmd (which built unpublished dataset
-#   476): na_flag on (receipt date, filer name, amount, contributor last/org name), dupe_flag = flag_dupes over all
-#   source columns, amount rounded to cents, year = calendar year of the receipt date, campfin address (address 1 +
+#   rebuilt from all 12 current extracts following ne_contribs_diary_after_2021.Rmd: na_flag on (receipt date,
+#   filer name, amount, contributor last/org name), dupe_flag = flag_dupes over all source columns, amount rounded to cents, year = calendar year of the receipt date, campfin address (address 1 +
 #   2) / zip / city (normal_city -> zipcodes swap -> refine) normalization.
 #   Changes from that diary: read as windows-1252 (it read UTF-8 and produced U+FFFD); a quote-aware-free reader
 #   instead of its stray-quote regex (see read_nadc() in ne_common.R; values kept as published, CRLF inside a value
@@ -26,12 +22,14 @@
 #   contribution_year, na_flag, dupe_flag, address_clean, city_clean, zip_clean. New-only fields follow, blank for the
 #   old era; source_file says where each row came from.
 # - 2021 overlap: old rows also present in the new system are DROPPED (new copy kept); rule in match_overlap()
-#   (ne_common.R). Pairs written to out/ne_contribs_overlap_dropped.csv.
+#   (ne_common.R). Pairs written to data/clean/ne_contribs_overlap_dropped.csv.
 # Superseded records: the new system shows changes as "Offset due to update/delete of filed item" rows (negative
-# amounts) next to the original; kept as published (same call as Alabama 126). Amended = Y kept. 0 rows dropped as
+# amounts) next to the original; kept as published. Amended = Y kept. 0 rows dropped as
 # superseded. The old system has no amendment marker.
-here::i_am("datasets/442-443-ne-campaign-finance/ne_contribs.R")
-source(here::here("datasets", "442-443-ne-campaign-finance", "ne_common.R"))
+library(here)
+here::i_am("state/ne/code/ne_contribs.R")
+ne_dataset <- "contribs"
+source(here("state", "ne", "code", "ne_common.R"))
 
 # ---- new era ----
 rd <- read_all_years("ContributionLoan")

@@ -1,9 +1,8 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/333-vermont-contracts/vt_contracts.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Dataset 333, Vermont contracts (Vermont Vendor Payments) — full rebuild 2026-10-14 (not uploaded).
-# Follows accountability_datacleaning/state/vt/contracts/docs/vt_contracts_diary.Rmd, with these changes:
+# Vermont contracts (Vermont Vendor Payments): full rebuild 2026-10-14.
+# Inputs under `base` = state/vt/contracts/data (set below): raw/rows.tsv (the export) and old/*.csv (the current
+# files); output in data/clean/.
+#   Rscript state/vt/contracts/code/vt_contracts.R   # from the repo root
+# Follows state/vt/contracts/docs/vt_contracts_diary.Rmd, with these changes:
 #   - source read as the full current export (data.vermont.gov 786x-sbp3 rows.tsv, 2,588,462 rows, quarters
 #     2009-09-30 .. 2026-06-30), read as the diary did (default quoting: some values are CSV-quoted inside the TSV,
 #     e.g. "Montpelier Broadcasting-WRJT ""The Point""", and come out unquoted; row count checked = 2,588,462);
@@ -11,16 +10,15 @@
 #     replacement of both current files (vt_contracts_clean.csv + vt_contracts_20200611-20230209.csv);
 #   - Canadian province abbreviations are listed inline instead of scraped from ncbi.nlm.nih.gov (NBK7254);
 #   - the export's trailing grand-total line is dropped; 1 payment without a quarter is kept (year blank) and the
-#     diary's na_flag column is not added (positional mapping, 19 columns);
+#     diary's na_flag column is not added (19 columns, as the current files);
 #   - 25 vendor names whose accented letter is U+FFFD in the current export are restored from the current files;
 #   - campfin 1.0.11 from CRAN (the diary installed it from GitHub); no plots.
-# The source has no amendment / superseded flag. Output columns = the current files' 19-column header, same order
-# (the mapping is positional).
+# The source has no amendment / superseded flag. Output columns = the current files' 19-column header, same order.
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(lubridate); library(fs)
-  library(campfin); library(janitor)
+  library(campfin); library(janitor); library(here)
 })
-base <- path_expand("~/uc_berkeley/datacleaning_agents/work/333-vermont-contracts")
+base <- here("state", "vt", "contracts", "data")  # holds raw/, old/ and clean/
 raw_tsv <- path(base, "raw", "rows.tsv")
 
 vtc <- read_delim(raw_tsv, delim = "\t", name_repair = make_clean_names,
@@ -52,8 +50,7 @@ message("vendor names with U+FFFD: ", length(bad), "; restored from the current 
 key_vars <- c("quarter_ending", "department", "amount", "vendor")
 vtc <- flag_na(vtc, all_of(key_vars))
 message("na_flag: ", sum(vtc$na_flag))
-# The diary keeps na_flag when it is non-zero, but the mapping is positional and the current files have no na_flag
-# column, so the row(s) are kept (year blank) and the flag column is not added.
+# The current files have no na_flag column: the flagged row(s) are kept (year blank) and the flag column is not added.
 if (sum(vtc$na_flag) > 0) print(select(filter(vtc, na_flag), all_of(key_vars)))
 vtc <- select(vtc, -na_flag)
 
@@ -79,7 +76,7 @@ want <- c("quarter_ending", "department", "dept_state", "unit_no", "vendor_numbe
 stopifnot(setequal(names(vtc), want))
 vtc <- vtc[want]
 
-out <- path(base, "clean", sprintf("vt_contracts_%d-%d.csv", min(vtc$year, na.rm = TRUE), max(vtc$year, na.rm = TRUE)))
+out <- path(dir_create(path(base, "clean")), sprintf("vt_contracts_%d-%d.csv", min(vtc$year, na.rm = TRUE), max(vtc$year, na.rm = TRUE)))
 write_csv(vtc, out, na = "")
 message("wrote ", out, ": ", format(nrow(vtc), big.mark = ","), " rows")
 print(count(vtc, year), n = Inf)

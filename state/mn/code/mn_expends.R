@@ -1,18 +1,15 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/369-417-mn-campaign-finance/mn_expends.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
+# Minnesota campaign expenditures -- rebuild 2015-2026, October 2026 (replaces mn_expends_clean_new.csv).
+#   Rscript state/mn/code/mn_expends.R from the repo root; put the CFB download in state/mn/expends/data/raw/ and the
+#   previous published mn_expends_clean_new.csv in state/mn/expends/data/old/; run reparse.py on the download first
+#   (see mn_common.R). Outputs go to state/mn/expends/data/clean/.
 #
-# Dataset 417, Minnesota campaign expenditures -- rebuild 2015-2026, 2026-10-28 (NOT uploaded; would replace DataFile
-# 740, whose rows came from csv/mn_expends_clean_new.csv). Run from the datacleaning_agents repo root:
-#   Rscript datasets/369-417-mn-campaign-finance/mn_expends.R
-#
-# Follows accountability_datacleaning state/mn/expends/docs/mn_expends_diary.Rmd ("Update: October 2026"):
+# Follows state/mn/expends/docs/mn_expends_diary.Rmd ("Update: October 2026"):
 # - Source: CFB "Expenditures, including contributions made, by all entities - 2015 to present"
 #   (https://cfb.mn.gov/reports-and-data/self-help/data-downloads/campaign-finance/?download=-1890073264), retrieved
-#   2026-10-28 (retrievals.jsonl), UTF-8, full history regenerated from the board's database at each download.
+#   2026-10-28, UTF-8, full history regenerated from the board's database at each download.
 # - Changes from the 2022-12 run:
-#   * the download NO LONGER HAS `Vendor address 1` / `Vendor address 2`. User decision 2026-10-28: do not backfill
-#     from the old file; keep `vendor_address_1/2` in the header, blank. So `address_clean` (normal_address of the two)
+#   * the download NO LONGER HAS `Vendor address 1` / `Vendor address 2`. They are not backfilled
+#     from the old file; `vendor_address_1/2` stay in the header, blank. So `address_clean` (normal_address of the two)
 #     is blank on every row. Vendor city/state/zip are still published and normalised as before.
 #   * Date is ISO (was m/d/Y); reader read_cfb() in mn_common.R (RFC quoting -- the diary's escape_double = FALSE
 #     turned "" into two quotes, e.g. """"Healthcare Headlines"""" -- plus the export's backslash-quotes, kept).
@@ -21,8 +18,10 @@
 #   normal_city + swap + refine, `_clean` columns. in_kind stays "Yes"/"No" as published.
 # - Output: same 26 columns, same order as the old file (csv/mn_expends_clean_new.csv).
 # Superseded records: no amendment flag; the board's database keeps only current versions, 0 rows dropped.
-here::i_am("datasets/369-417-mn-campaign-finance/mn_expends.R")
-source(here::here("datasets", "369-417-mn-campaign-finance", "mn_common.R"))
+library(here)
+here::i_am("state/mn/code/mn_expends.R")
+mn_dataset <- "expends"
+source(here("state", "mn", "code", "mn_common.R"))
 suppressPackageStartupMessages({ library(refinr); library(tidyr) })
 raw_csv <- path(raw_dir, "download_-1890073264_expends_all.csv")
 

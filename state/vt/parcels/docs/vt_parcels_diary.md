@@ -1124,17 +1124,16 @@ unname(aws_size == clean_size)
 
 ## Update: October 2026
 
-Rebuilt on 2026-10-28 as a **new** dataset, "Vermont Parcels 2026", leaving the 2021 dataset (410) unchanged. The full
-script is [`code/vt_parcels.R`](../code/vt_parcels.R). The output is `vt_parcels_2017-2026.csv`, with
-344,138 rows and the same 63 columns in the same order as `vt_parcels_2017-20211011.csv`.
+Rebuilt 2026-10-28 as a new dataset, "Vermont Parcels 2026"; the 2021 dataset is unchanged. Script:
+[`code/vt_parcels.R`](../code/vt_parcels.R). Output: `vt_parcels_2017-2026.csv`, 344,138 rows, the same 63 columns
+in the same order as `vt_parcels_2017-20211011.csv`.
 
-What changed from the steps above:
+Changes from the steps above:
 
-1. **Download.** The v3 URL above (`opendata.arcgis.com/api/v3/datasets/{id}/downloads/data`) still answers, but it
-   serves a stale cached export: Last-Modified 2025-06-24, Grand List 2022, 338,862 rows. Request a fresh export from
-   the Hub v1 download API instead. It answers `202` (Pending, then ExportingData) while it regenerates, which took about
-   9 minutes, then `200` with a `resultUrl`. Poll no faster than every 30 seconds. To check the download, compare it with
-   the live count: `{layer}/query?where=1=1&returnCountOnly=true&f=json` returned 344,138 on 2026-10-28.
+1. **Download.** The v3 URL above (`opendata.arcgis.com/api/v3/datasets/{id}/downloads/data`) serves a stale cached
+   export (Last-Modified 2025-06-24, Grand List 2022, 338,862 rows). The file comes from the Hub v1 download API,
+   which answers `202` while it regenerates the export (about 9 minutes), then `200` with a `resultUrl`. The layer's
+   live count (`{layer}/query?where=1=1&returnCountOnly=true&f=json`) was 344,138 on 2026-10-28.
 
 ``` r
 item <- "09cf47e1cf82465e99164762a04f3ce6"
@@ -1147,29 +1146,26 @@ repeat {
 GET(st$resultUrl, write_disk(raw_csv, overwrite = TRUE))
 ```
 
-2. **Header.** The v1 CSV's header row is field *aliases* ("GIS SPAN", "Grand List Year", "Owner Name 1", ...). Name
-   the columns by position from the layer's field list (`{layer}?f=json`, `$fields$name`). These are the same 57 names,
-   in the same order, as the 2021 dictionary. Then run `clean_names()` as before.
-3. **Read.** Drop `escape_double = FALSE`. The 2026 file has 28 lines with `""` inside quoted fields (for example
-   `""ALLEN CLARK""`) and 901 records with line breaks inside quoted fields. Read every column as character with
-   `na = ""` and `trim_ws = FALSE`, so values stay exactly as published.
-4. **Category.** `CAT` is now published as codes. They are mapped back to the 2021 labels so the new file matches the
-   old dataset. The pairs were confirmed by joining the old and new files on SPAN, and every code has a label:
+2. **Header.** The v1 CSV's header row has field *aliases* ("GIS SPAN", "Grand List Year", "Owner Name 1", ...).
+   Columns are named by position from the layer's field list (`{layer}?f=json`, `$fields$name`): the same 57 names,
+   in the same order, as the 2021 dictionary. Then `clean_names()` as before.
+3. **Read.** No `escape_double = FALSE`. The file has 28 lines with `""` inside quoted fields (for example
+   `""ALLEN CLARK""`) and 901 records with line breaks inside quoted fields. Every column is read as character with
+   `na = ""` and `trim_ws = FALSE`.
+4. **Category.** `CAT` is now published as codes, mapped back to the 2021 labels:
    R1 Residential-1, R2 Residential-2, M Miscellaneous, O Other, C Commercial, MHL Mobile Home/la, MHU Mobile Home/un,
    S1 Seasonal-1, S2 Seasonal-2, W Woodland, F Farm, CA Commercial Apt, I Industrial, UE Utilities Elec,
    UO Utilities Other.
-5. **City check.** The Google `check_city()` step was skipped, so no API calls are made. It only added cities to the
-   valid list used by the progress table and never changed `city_clean`. The normal, swap and refine steps are
-   unchanged. Two technical changes keep the row count fixed:
-   - `norm_city` is de-duplicated per citygl/state/zip, because a ZIP can have several cities in `zipcodes`.
-   - The refine join uses `objectid`.
-6. **Column order.** The v1 export lists `Shape__Area` before `Shape__Length`. Relocate `shape_length` before
-   `shape_area` to keep the 2021 order.
-7. **Kept as published** (rule: agency data is not corrected):
+5. **City check.** The Google `check_city()` step is skipped; it never changed `city_clean`. The normal, swap and
+   refine steps are unchanged, except that `norm_city` is de-duplicated per citygl/state/zip and the refine join
+   uses `objectid`.
+6. **Column order.** `shape_length` is placed before `shape_area`, as in 2021 (the v1 export lists `Shape__Area`
+   first).
+7. **Kept as published:**
    - 7,161 road, rail, trail and water rows with no owner.
    - 11 rows with YEAR 0.
    - 175 lowercase `c` RESCODE values.
-   - The town values "Cabot" (1 row) and "Pomfret" (2 rows), which are mixed case beside CABOT and POMFRET.
-   - ESSEX JUNCTION, which is now its own town (a city since 2022).
+   - The town values "Cabot" (1 row) and "Pomfret" (2 rows), in mixed case beside CABOT and POMFRET.
+   - ESSEX JUNCTION, now its own town (a city since 2022).
 
-`year` is still the source's GIS (parcel-map) year, now 2017–2026. `glyear` is 2025 on every matched parcel.
+`year` is the source's GIS (parcel-map) year, now 2017–2026. `glyear` is 2025 on every matched parcel.

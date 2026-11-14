@@ -42,5 +42,5 @@ The output is ASCII. Input zip sha256 `6573e0d1…3cec4`; output sha256 `5b83306
 
 ## Updating
 
-Download the current month's zip from the download page and run `python build.py <zip>`; it writes
-`npi_<data-through date>.csv`.
+Download the current month's zip from the download page to `data/raw/` and run
+`python3 national/npi/code/build.py national/npi/data/raw/<zip>`; it writes `data/clean/npi_<data-through date>.csv`.

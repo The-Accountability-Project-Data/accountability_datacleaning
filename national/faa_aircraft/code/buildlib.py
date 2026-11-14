@@ -1,6 +1,4 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (tools/buildlib.py): helpers used by build.py.
-#
-"""Small helpers shared by datasets/*/build.py: column naming, ZIP5, sha256, build log."""
+"""Helpers used by build.py: column naming, ZIP5, sha256, build log."""
 import hashlib
 import json
 import os

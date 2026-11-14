@@ -1,22 +1,22 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (ec2/il/il_contribs.R): the script that built the October 2026 file.
-# It ran on the project's EC2 build box and reads/writes paths there (e.g. ~/tx/raw, ~/il/); point them at your
-# own raw and output folders before running it from here.
-#
-# Illinois campaign contributions (dataset 400): rebuild from the SBE bulk Receipts.txt, split by year.
-# Follows accountability_datacleaning state/il/contribs/docs/il_contribs_diary.Rmd (2023): read the tab-delimited file,
+# Illinois campaign contributions: rebuild from the SBE bulk Receipts.txt, split by year.
+# Reads state/il/contribs/data/raw/Committees.txt and data/raw/Receipts-fixed.txt (Receipts.txt after
+# `bash state/il/code/repair.sh contribs`) and writes state/il/contribs/data/clean/ (emptied first).
+# Follows state/il/contribs/docs/il_contribs_diary.Rmd (2023): read the tab-delimited file,
 # snake_case names, join the recipient committee from Committees.txt (normalized address/ZIP/state/city as cmte_*),
 # na_flag (rcv_date, last_only_name, amount, cmte_name), dupe_flag (identical on every column except id, within the
 # same rcv_date), rcv_year, campfin address/ZIP/state normalization and city norm/swap/refine.
-# Differences (user, 2026-10-12): records superseded by an amendment (archived = TRUE) are DROPPED; the 2023 hand fixes
-# for broken lines are replaced by ~/il/repair.sh (continuation lines joined; lines with a stray tab set aside); output
+# Differences: records superseded by an amendment (archived = TRUE) are DROPPED; the 2023 hand fixes
+# for broken lines are replaced by repair.sh (continuation lines joined; lines with a stray tab set aside); output
 # is one file per rcv_year: il_contribs_<year>.csv (before 1994 -> il_contribs_pre1994.csv). Same 41 columns and order
-# as the 2023 file (il_contribs_clean_new.csv), which dataset 400's index mapping reads.
-#   Rscript il_contribs.R
+# as the 2023 file (il_contribs_clean_new.csv).
+# Usage: Rscript state/il/contribs/code/il_contribs.R from the repo root.
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(stringr); library(lubridate); library(janitor); library(tidyr)
-  library(campfin); library(refinr); library(fs); library(cli); library(openssl)
+  library(campfin); library(refinr); library(fs); library(cli); library(openssl); library(here)
 })
-out_dir <- dir_create(path_expand("~/il/clean_contribs")); dir_walk(out_dir, file_delete)
+here::i_am("state/il/contribs/code/il_contribs.R")
+raw_dir <- here("state", "il", "contribs", "data", "raw")
+out_dir <- dir_create(here("state", "il", "contribs", "data", "clean")); dir_walk(out_dir, file_delete)
 layout <- c("id","committee_id","filed_doc_id","e_trans_id","last_only_name","first_name","rcv_date","amount",
   "aggregate_amount","loan_amount","occupation","employer","address1","address2","city","state","zip","d2part",
   "description","vendor_last_only_name","vendor_first_name","vendor_address1","vendor_address2","vendor_city",
@@ -24,7 +24,7 @@ layout <- c("id","committee_id","filed_doc_id","e_trans_id","last_only_name","fi
   "cmte_state","cmte_zip","na_flag","dupe_flag","rcv_year","address_clean","city_clean","state_clean","zip_clean")
 
 # committees, normalized as in the diary
-committees <- read_delim(path_expand("~/il/raw/Committees.txt"), delim = "\t", quote = "", escape_backslash = FALSE,
+committees <- read_delim(path(raw_dir, "Committees.txt"), delim = "\t", quote = "", escape_backslash = FALSE,
   escape_double = FALSE, trim_ws = TRUE, locale = locale(encoding = "windows-1252"), col_types = cols(.default = col_character(), ID = col_integer()),
   progress = FALSE) %>% clean_names(case = "snake") %>%
   select(id, name, starts_with("address"), city, state, zip) %>%
@@ -44,7 +44,7 @@ committees <- committees %>%
   rename_with(~paste0("cmte_", .), -id)
 cli_alert_success("{nrow(committees)} committees")
 
-ilc <- read_delim(path_expand("~/il/work/Receipts-fixed.txt"), delim = "\t", quote = "", escape_backslash = FALSE,
+ilc <- read_delim(path(raw_dir, "Receipts-fixed.txt"), delim = "\t", quote = "", escape_backslash = FALSE,
   escape_double = FALSE, trim_ws = TRUE, locale = locale(encoding = "windows-1252"), progress = FALSE,
   col_types = cols(.default = col_character(), ID = col_integer(), CommitteeID = col_integer(),
                    FiledDocID = col_integer(), RcvDate = col_datetime(), Amount = col_double(),

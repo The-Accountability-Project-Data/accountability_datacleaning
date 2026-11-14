@@ -154,3 +154,8 @@ rsconnect/
 data/
 
 national/faa_pilots/faa-lic-py/data/
+
+# Data files
+*.csv
+*.txt
+*.tsv

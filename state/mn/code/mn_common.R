@@ -1,8 +1,8 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/369-417-mn-campaign-finance/mn_common.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Shared reader for the Minnesota CFB downloads (369/417 rebuild, Oct 2026). Sourced by mn_contribs.R / mn_expends.R.
+# Shared reader for the Minnesota CFB downloads (October 2026 update). Sourced by mn_contribs.R / mn_expends.R,
+# which set `mn_dataset` ("contribs" or "expends") first. Paths are built with here() from the repo root:
+# inputs in state/mn/<mn_dataset>/data/raw/, the previous published file in data/old/, outputs in data/clean/.
+# Run reparse.py on the raw download first (python3 state/mn/code/reparse.py state/mn/<mn_dataset>/data/raw/<file>.csv);
+# it writes the Python-parsed copy to state/mn/<mn_dataset>/data/parsed/, which read_cfb() cross-checks against.
 #
 # The CFB CSVs are RFC-style (fields with commas/quotes/CR-LF are quoted, a quote inside is doubled ""), EXCEPT that
 # in a few dozen values the board's export wrote a quote as backslash-quote (\"), e.g.
@@ -19,9 +19,10 @@ suppressPackageStartupMessages({
   library(fs); library(here); library(glue)
 })
 comma <- function(x) format(x, big.mark = ",", scientific = FALSE)
-base    <- here("work", "369-417-mn-campaign-finance")
-raw_dir <- path(base, "raw", "2026-10-28")
-out_dir <- dir_create(path(base, "out"))
+stopifnot(exists("mn_dataset"), mn_dataset %in% c("contribs", "expends"))
+base    <- here("state", "mn", mn_dataset, "data")
+raw_dir <- path(base, "raw")
+out_dir <- dir_create(path(base, "clean"))
 
 read_cfb <- function(f, col_types, expected_records) {
   txt <- read_file(f, locale = locale(encoding = "UTF-8"))
@@ -33,7 +34,7 @@ read_cfb <- function(f, col_types, expected_records) {
   cat(basename(f), ": backslash-quotes doubled", n_fix, "; records", comma(nrow(df)), "; parse problems", nrow(pr), "\n")
   if (nrow(pr)) print(pr, n = 50)
   stopifnot(nrow(df) == expected_records, nrow(pr) == 0)
-  # cross-check with Python's csv parse (parsed/ copy written by reparse.py): all values without a backslash equal
+  # cross-check with Python's csv parse (data/parsed/ copy written by reparse.py): all values without a backslash equal
   py <- read_csv(path(base, "parsed", basename(f)), col_types = cols(.default = col_character()), na = "",
                  trim_ws = FALSE, progress = FALSE, lazy = FALSE)
   stopifnot(nrow(py) == nrow(df), identical(names(py), names(df)))

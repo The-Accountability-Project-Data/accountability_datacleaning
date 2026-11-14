@@ -1,0 +1,350 @@
+{
+ "source": "Tennessee Comptroller of the Treasury, Division of Property Assessments, parcel data (request form https://comptrollertn.formstack.com/forms/parcel_data, submitted by the user 2026-11-10)",
+ "page": "https://comptroller.tn.gov/office-functions/pa/gisredistricting/redistricting-and-land-use-maps/parcel-data.html",
+ "counties": [
+  {
+   "county": "Anderson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Anderson.zip"
+  },
+  {
+   "county": "Bedford",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Bedford.zip"
+  },
+  {
+   "county": "Benton",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Benton.zip"
+  },
+  {
+   "county": "Bledsoe",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Bledsoe.zip"
+  },
+  {
+   "county": "Blount",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Blount.zip"
+  },
+  {
+   "county": "Bradley",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Bradley.zip"
+  },
+  {
+   "county": "Campbell",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Campbell.zip"
+  },
+  {
+   "county": "Cannon",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Cannon.zip"
+  },
+  {
+   "county": "Carroll",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Carroll.zip"
+  },
+  {
+   "county": "Carter",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Carter.zip"
+  },
+  {
+   "county": "Cheatham",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Cheatham.zip"
+  },
+  {
+   "county": "Claiborne",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Claiborne.zip"
+  },
+  {
+   "county": "Clay",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Clay.zip"
+  },
+  {
+   "county": "Cocke",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Cocke.zip"
+  },
+  {
+   "county": "Coffee",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Coffee.zip"
+  },
+  {
+   "county": "Crockett",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Crockett.zip"
+  },
+  {
+   "county": "Cumberland",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Cumberland.zip"
+  },
+  {
+   "county": "Decatur",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Decatur.zip"
+  },
+  {
+   "county": "Dekalb",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Dekalb.zip"
+  },
+  {
+   "county": "Dickson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Dickson.zip"
+  },
+  {
+   "county": "Dyer",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Dyer.zip"
+  },
+  {
+   "county": "Fayette",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Fayette.zip"
+  },
+  {
+   "county": "Fentress",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Fentress.zip"
+  },
+  {
+   "county": "Franklin",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Franklin.zip"
+  },
+  {
+   "county": "Gibson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Gibson.zip"
+  },
+  {
+   "county": "Giles",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Giles.zip"
+  },
+  {
+   "county": "Grainger",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Grainger.zip"
+  },
+  {
+   "county": "Greene",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Greene.zip"
+  },
+  {
+   "county": "Grundy",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Grundy.zip"
+  },
+  {
+   "county": "Hamblen",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Hamblen.zip"
+  },
+  {
+   "county": "Hancock",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Hancock.zip"
+  },
+  {
+   "county": "Hardeman",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Hardeman.zip"
+  },
+  {
+   "county": "Hardin",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Hardin.zip"
+  },
+  {
+   "county": "Hawkins",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Hawkins.zip"
+  },
+  {
+   "county": "Haywood",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Haywood.zip"
+  },
+  {
+   "county": "Henderson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Henderson.zip"
+  },
+  {
+   "county": "Henry",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Henry.zip"
+  },
+  {
+   "county": "Houston",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Houston.zip"
+  },
+  {
+   "county": "Humphreys",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Humphreys.zip"
+  },
+  {
+   "county": "Jackson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Jackson.zip"
+  },
+  {
+   "county": "Jefferson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Jefferson.zip"
+  },
+  {
+   "county": "Johnson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Johnson.zip"
+  },
+  {
+   "county": "Lake",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Lake.zip"
+  },
+  {
+   "county": "Lauderdale",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Lauderdale.zip"
+  },
+  {
+   "county": "Lawrence",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Lawrence.zip"
+  },
+  {
+   "county": "Lewis",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Lewis.zip"
+  },
+  {
+   "county": "Lincoln",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Lincoln.zip"
+  },
+  {
+   "county": "Loudon",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Loudon.zip"
+  },
+  {
+   "county": "McMinn",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/McMinn.zip"
+  },
+  {
+   "county": "McNairy",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/McNairy.zip"
+  },
+  {
+   "county": "Macon",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Macon.zip"
+  },
+  {
+   "county": "Madison",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Madison.zip"
+  },
+  {
+   "county": "Marion",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Marion.zip"
+  },
+  {
+   "county": "Marshall",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Marshall.zip"
+  },
+  {
+   "county": "Maury",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Maury.zip"
+  },
+  {
+   "county": "Meigs",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Meigs.zip"
+  },
+  {
+   "county": "Monroe",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Monroe.zip"
+  },
+  {
+   "county": "Moore",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Moore.zip"
+  },
+  {
+   "county": "Morgan",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Morgan.zip"
+  },
+  {
+   "county": "Obion",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Obion.zip"
+  },
+  {
+   "county": "Overton",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Overton.zip"
+  },
+  {
+   "county": "Perry",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Perry.zip"
+  },
+  {
+   "county": "Pickett",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Pickett.zip"
+  },
+  {
+   "county": "Polk",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Polk.zip"
+  },
+  {
+   "county": "Putnam",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Putnam.zip"
+  },
+  {
+   "county": "Rhea",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Rhea.zip"
+  },
+  {
+   "county": "Roane",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Roane.zip"
+  },
+  {
+   "county": "Robertson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Robertson.zip"
+  },
+  {
+   "county": "Scott",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Scott.zip"
+  },
+  {
+   "county": "Sequatchie",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Sequatchie.zip"
+  },
+  {
+   "county": "Sevier",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Sevier.zip"
+  },
+  {
+   "county": "Smith",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Smith.zip"
+  },
+  {
+   "county": "Stewart",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Stewart.zip"
+  },
+  {
+   "county": "Sullivan",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Sullivan.zip"
+  },
+  {
+   "county": "Tipton",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Tipton.zip"
+  },
+  {
+   "county": "Trousdale",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Trousdale.zip"
+  },
+  {
+   "county": "Unicoi",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Unicoi.zip"
+  },
+  {
+   "county": "Union",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Union.zip"
+  },
+  {
+   "county": "VanBuren",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/VanBuren.zip"
+  },
+  {
+   "county": "Warren",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Warren.zip"
+  },
+  {
+   "county": "Washington",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Washington.zip"
+  },
+  {
+   "county": "Wayne",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Wayne.zip"
+  },
+  {
+   "county": "Weakley",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Weakley.zip"
+  },
+  {
+   "county": "White",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/White.zip"
+  },
+  {
+   "county": "Wilson",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Wilson.zip"
+  },
+  {
+   "county": "Sumner",
+   "url": "https://comptroller.tn.gov/content/dam/cot/pa/documents/landuse/maps/parcel-maps-data/Sumner.zip"
+  }
+ ]
+}

@@ -1,34 +1,32 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/449-tx-licenses/tx_licenses.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Texas Licenses 2026 (new dataset; predecessor 449 "Texas licenses") — build 2026-10-28.
-# Follows accountability_datacleaning/state/tx/licenses/docs/tx_licenses_diary.Rmd (Kiernan Nicholls, 2022) on the TDLR
+# Texas Licenses 2026, built 2026-10-28.
+# Follows state/tx/licenses/docs/tx_licenses_diary.Rmd (Kiernan Nicholls, 2022) on the TDLR
 # all-licenses file https://www.tdlr.texas.gov/dbproduction2/ltlicfile.csv (retrieved 2026-10-28, Last-Modified
-# 2026-10-28 11:26:30 GMT; see datasets/449-tx-licenses/retrievals.jsonl).
+# 2026-10-28 11:26:30 GMT). Inputs under `base` = state/tx/licenses/data (set below): raw/ltlicfile.csv and the 2022 file
+# old/tx_licenses_2018-20220516.csv, whose column names are reused. Output goes in data/clean/.
+#   Rscript state/tx/licenses/code/tx_licenses.R   # from the repo root
 #
-# Output: exactly the 2022 file's 28 columns in the same order (449's mapping is the template).
-# Changes from the diary (user decisions 2026-10-28 marked *):
+# Output: exactly the 2022 file's 28 columns in the same order.
+# Changes from the diary:
 #  - Read: the file now has a header row and 23 columns (the 19 in lrformat.txt + 4 TDLR flag columns), and 279
 #    Boiler Inspector rows carry a 24th field after the 19th. Read 24 unnamed columns, skip the header, keep 1-19.
 #    The 2022 workaround (a 20th "UNKOWN DATE" column + fix.csv) is gone; `unkown_date` is written blank.
-#  - * The 4 flag columns (Same Address or not, Business/Mailing address that mentions BOX, Phone-same or not) dropped.
-#  - * license_expiration_year is blank (NA) for the 01/01/1900 placeholder dates (652 Elevator Responsible Party
+#  - The 4 flag columns (Same Address or not, Business/Mailing address that mentions BOX, Phone-same or not) dropped.
+#  - license_expiration_year is blank (NA) for the 01/01/1900 placeholder dates (652 Elevator Responsible Party
 #    rows); the date itself is kept as published.
-#  - * Rows with a blank LICENSE TYPE (barber shops etc.) kept as published.
+#  - Rows with a blank LICENSE TYPE (barber shops etc.) kept as published.
 #  - City refine: computed on the city vector and validated against zipcodes per row, instead of the diary's
 #    left_join(txl, good_refine) on every column (which can duplicate rows); same rule, no join blow-up.
-#  - across(x, na_if, "") -> across(x, ~na_if(.x, "")) (dplyr >= 1.1); paths are this repo's work dir; plots skipped.
+#  - across(x, na_if, "") -> across(x, ~na_if(.x, "")) (dplyr >= 1.1); plots skipped.
 # No superseded/amended flag exists in this source.
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(tidyr); library(stringr); library(lubridate)
-  library(campfin); library(refinr); library(fs)
+  library(campfin); library(refinr); library(fs); library(here)
 })
 
-base <- path_expand("~/uc_berkeley/datacleaning_agents/work/449-tx-licenses")
-raw_csv <- path(base, "raw", "2026-10-28", "ltlicfile.csv")
+base <- here("state", "tx", "licenses", "data")  # holds raw/, old/ and clean/
+raw_csv <- path(base, "raw", "ltlicfile.csv")
 old_csv <- path(base, "old", "tx_licenses_2018-20220516.csv")
-out_dir <- dir_create(path(base, "out"))
+out_dir <- dir_create(path(base, "clean"))
 
 old_cols <- names(read_csv(old_csv, n_max = 0, show_col_types = FALSE))
 stopifnot(length(old_cols) == 28)
@@ -72,7 +70,7 @@ txl <- flag_na(txl, all_of(key_vars))
 txl <- flag_dupes(txl, -license_number)
 message("na_flag: ", sum(txl$na_flag), " | dupe_flag: ", sum(txl$dupe_flag))
 
-# year = expiration year; blank for the 1900-01-01 placeholder (user, 2026-10-28)
+# year = expiration year; blank for the 1900-01-01 placeholder
 txl <- txl %>% mutate(
   license_expiration_year = if_else(license_expiration_date == as.Date("1900-01-01"),
                                     NA_integer_, as.integer(year(license_expiration_date)))

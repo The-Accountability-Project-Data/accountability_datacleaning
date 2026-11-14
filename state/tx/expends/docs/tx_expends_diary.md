@@ -1055,35 +1055,30 @@ if (require(duckr)) {
 
 ## Update: October 2026
 
-_Rebuilt 2026-10-12 for The Accountability Project (Claude, for Jacob Fenton); published 2026-10-15. The runnable
-script is [`code/tx_expends.R`](../code/tx_expends.R), which follows the steps above; it was run on an EC2 box.
-Output: `tx_expends_clean.csv`, 5,225,539 rows (2023: 4,355,908), the same 41 columns in the same order._
+_Rebuilt 2026-10-12 with [`code/tx_expends.R`](../code/tx_expends.R), which follows the steps above; published
+2026-10-15. Output: `tx_expends_clean.csv`, 5,225,539 rows (2023: 4,355,908), the same 41 columns in the same order._
 
-**Source.** The old URLs (`https://www.ethics.state.tx.us/data/search/cf/TEC_CF_CSV.zip` and
-`.../CFS-ReadMe.txt`) now return 404. TEC's [campaign finance search page](https://www.ethics.state.tx.us/search/cf/)
-links the same "Campaign Finance CSV Database" at
-`https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip` (redirects to CloudFront), refreshed daily. The
-copy used was downloaded 2026-10-12 (1,062,969,558 bytes, Last-Modified 2026-10-12 10:35 UTC); the expenditures are
-`expend_01.csv` to `expend_13.csv`. It is the full history, so the whole file was rebuilt.
+**Source.** The old URLs return 404. TEC's [campaign finance search page](https://www.ethics.state.tx.us/search/cf/)
+now links the "Campaign Finance CSV Database" at `https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip`,
+refreshed daily. Downloaded 2026-10-12 (1,062,969,558 bytes); the expenditures are `expend_01.csv` to
+`expend_13.csv`. It is the full history; the whole file was rebuilt.
 
 ``` r
 zip_url <- "https://prd.tecprd.ethicsefile.com/public/cf/public/TEC_CF_CSV.zip"
 ```
 
-**Differences from the steps above** (the results are the same; the first rows match the 2023 file):
+**Changes from the steps above:**
 
-1. `campfin::to_logical()`, used for the Y/N flags, is no longer in campfin (1.0.11), so the script defines an
-   equivalent that maps Y/YES/TRUE/T to TRUE and N/NO/FALSE/F to FALSE.
-2. Duplicates (identical on every column except `id`) are found by hashing each row instead of calling
-   `duplicated()` on the whole table: the same result with less memory. 171,640 rows (3.3%) are flagged; `na_flag`
-   flags 22,012.
-3. The `vroom()` column types above name the original camelCase columns, but `.name_repair` has already renamed
-   them, so dates and amounts are read as text and converted afterwards (`date`, `amount`), as above; `received`
-   stays the raw `YYYYMMDD` text, as in the 2023 file.
-4. Reading all 13 files at once needed 16 GB of swap on the box.
+1. `campfin::to_logical()` is no longer in campfin (1.0.11); the script defines an equivalent that maps
+   Y/YES/TRUE/T to TRUE and N/NO/FALSE/F to FALSE.
+2. Duplicates (identical on every column except `id`) are found by hashing each row. 171,640 rows (3.3%) are
+   flagged; `na_flag` flags 22,012.
+3. The `vroom()` column types above name the original camelCase columns, which `.name_repair` has already renamed,
+   so dates and amounts are read as text and converted afterwards; `received` stays the raw `YYYYMMDD` text, as in
+   the 2023 file.
+4. Reading all 13 files at once needed 16 GB of swap.
 
-**Superseded reports.** Records TEC marks as superseded by a later report (`infoOnlyFlag`) are kept, as in 2023, and
-can be filtered with the `info_flag` column. Whether to drop them in a future rebuild has not been decided.
+**Superseded reports.** Records TEC marks as superseded by a later report (`infoOnlyFlag`) are kept, as in 2023. The
+`info_flag` column marks them.
 
-**Years.** Coverage is 2000-2026; the dataset is listed that way. 91 earlier rows (14 dated 1994, 77 dated 1999) and
-21,363 undated rows are kept; everything is in one file.
+**Years.** 2000-2026, plus 91 earlier rows (14 dated 1994, 77 dated 1999) and 21,363 undated rows, all in one file.

@@ -1,19 +1,16 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (ec2/tx/tx_contribs_pre2000.R). Run after tx_contribs.R, on its
-# output folder (on the EC2 build box that was ~/tx/clean); pass another folder as the first argument.
-#
-# Texas campaign contributions (dataset 473): the step after tx_contribs.R that was done by hand on 2026-10-12, as a
-# script (written 2026-10-30 from the notes in datasets/473-tx-contributions.md and checked against the uploaded files).
-# tx_contribs.R writes one file per contribution year plus tx_contribs_undated.csv. Before upload:
+# Texas campaign contributions: run after tx_contribs.R, on its output folder (default state/tx/contribs/data/clean; pass another
+# folder as the first argument).
+# tx_contribs.R writes one file per contribution year plus tx_contribs_undated.csv. This script then:
 #   * the 1994 (18 rows) and 1999 (248 rows) files are combined, in that order, into tx_contribs_pre2000.csv;
 #   * the 17 undated rows are appended to the file of the year they were received (received_dt, 2008-2014), with
 #     contribution_yr left empty.
 # Every value is kept as written (all columns read as text); the year files and the undated file are removed after.
 #
-#   Rscript tx_contribs_pre2000.R [clean dir]   # default ~/tx/clean, as tx_contribs.R
-suppressPackageStartupMessages({ library(readr); library(dplyr); library(fs); library(cli) })
+#   Rscript state/tx/contribs/code/tx_contribs_pre2000.R [clean dir]   # from the repo root; default state/tx/contribs/data/clean, as tx_contribs.R
+suppressPackageStartupMessages({ library(readr); library(dplyr); library(fs); library(cli); library(here) })
 
 args <- commandArgs(trailingOnly = TRUE)
-clean_dir <- path_expand(if (length(args)) args[1] else "~/tx/clean")
+clean_dir <- if (length(args)) path_expand(args[1]) else here("state", "tx", "contribs", "data", "clean")
 read_text <- function(f) read_csv(f, col_types = cols(.default = col_character()), na = "", progress = FALSE)
 yr_file <- function(y) path(clean_dir, sprintf("tx_contribs_%s.csv", y))
 

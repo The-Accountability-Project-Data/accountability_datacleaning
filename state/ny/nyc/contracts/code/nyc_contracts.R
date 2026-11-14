@@ -1,24 +1,23 @@
-# Copied 2026-10-30 from the datacleaning_agents repo (datasets/291-nyc-contracts/nyc_contracts.R): the script that built the October 2026 file.
-# Its paths follow that repo's layout (here::i_am / work/<dataset>/raw and out); point them at your own
-# raw and output folders before running it from here.
-#
-# Dataset 291, New York City contracts — rebuild 2026-10-14 (Socrata group 1).
-# Follows accountability_datacleaning/state/ny/nyc/contracts/docs/nyc_contracts_diary.Rmd (2020), with these changes:
-#   - reads the saved export work/291-nyc-contracts/raw/Recent_Contract_Awards_2026-10-14.csv (downloaded once with a
+# New York City contracts -- rebuild 2026-10-14.
+# Follows state/ny/nyc/contracts/docs/nyc_contracts_diary.Rmd (2020), with these changes:
+#   - reads the saved export data/raw/Recent_Contract_Awards_2026-10-14.csv (downloaded once with a
 #     browser user agent from https://data.cityofnewyork.us/api/views/qyyg-4tf5/rows.csv?accessType=DOWNLOAD);
 #   - campfin from CRAN (1.0.11) instead of GitHub; pacman not used; col_types use the cleaned names (start_date,
 #     not StartDate) and col_date_mdy (col_date_usa is deprecated);
-#   - the diary's remove_empty("cols") made the layout depend on the data. Dataset 291's mapping is positional, so the
+#   - the diary's remove_empty("cols") made the layout depend on the data; the
 #     output is pinned to the 2020 file's 28 columns, in order (source-only columns are dropped and listed below);
 #   - notices already in the 2020 file keep its address fields (the source lost city/state/ZIP; see below);
 #   - otherwise the same steps: address split into addr/state/zip, agency_state "NY", na_flag, dupe check, year from
 #     start_date.
-# Output: work/291-nyc-contracts/clean/nyc_contracts_2003-2026.csv (UTF-8).
+# Output: data/clean/nyc_contracts_2003-2026.csv (UTF-8).
+#   Rscript state/ny/nyc/contracts/code/nyc_contracts.R from the repo root; put the export in
+#   state/ny/nyc/contracts/data/raw/ and the 2020 nyc_contracts_clean.csv in state/ny/nyc/contracts/data/old/.
 suppressPackageStartupMessages({
   library(dplyr); library(stringr); library(readr); library(vroom); library(lubridate); library(janitor)
-  library(campfin); library(fs); library(glue)
+  library(campfin); library(fs); library(glue); library(here)
 })
-base <- path_expand("~/uc_berkeley/datacleaning_agents/work/291-nyc-contracts")
+here::i_am("state/ny/nyc/contracts/code/nyc_contracts.R")
+base <- here("state", "ny", "nyc", "contracts", "data")
 raw_path <- path(base, "raw", "Recent_Contract_Awards_2026-10-14.csv")
 clean_dir <- dir_create(path(base, "clean"))
 
@@ -60,9 +59,9 @@ nyc <- mutate(nyc, year = year(start_date))
 
 # Address regression at the source (found 2026-10-14): for many notices the city now publishes only the street
 # ("1411 Broadway"), sometimes a different one, without city/state/ZIP (state found on 91% of the 2020 file's rows,
-# 55% of today's export; 3% for 2025-26). Per the address rule (never drop address data we had), notices that were
+# 55% of today's export; 3% for 2025-26). Notices that were
 # in the 2020 file keep its address fields (vendor_address, addr, state, zip): the address as originally published.
-old_path <- path(base, "raw", "old_nyc_contracts_clean.csv")   # s3 csv/nyc_contracts_clean.csv (DataFile 1014)
+old_path <- path(base, "old", "nyc_contracts_clean.csv")   # the 2020 file, csv/nyc_contracts_clean.csv
 old <- read_csv(old_path, col_types = cols(.default = col_character()), na = "", progress = FALSE) %>%
   select(request_id, o_vendor_address = vendor_address, o_addr = addr, o_state = state, o_zip = zip) %>%
   filter(!is.na(o_vendor_address))

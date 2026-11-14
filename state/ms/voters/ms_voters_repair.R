@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Mississippi voters: repair of the indexed file (dataset 219, csv/ms_voters_clean.csv, uploaded 2023-01-02)
-# Claude, Oct 2026, for the datacleaning_agents effort; see datacleaning_agents/datasets/219-ms-voters.md.
+# Mississippi voters: repair of the indexed file (csv/ms_voters_clean.csv, uploaded 2023-01-02), Oct 2026.
 #
 # The indexed file has the right values in the right columns, but every record ends with a field holding a line
 # break (WSD) plus an extra blank column whose name is itself a line break, so each record spans two lines. Cause:
@@ -11,9 +10,9 @@
 #
 # This rebuilds the file from the raw extract, read the same way, with the indexed file's column names:
 #   * 58 columns: the trailing empty header column is dropped; WSD is blank (it is blank in every raw row)
-#   * EFFECTIVE_REGN_DATE is named REGN_DATE, as in the indexed file (the mapping uses these names)
-#   * fix 1 (user, 2026-10-07): whitespace squished in every column (district codes were space-padded)
-#   * fix 2 (user, 2026-10-07): a double quote inside a value becomes an apostrophe (O"KEEFE -> O'KEEFE)
+#   * EFFECTIVE_REGN_DATE is named REGN_DATE, as in the indexed file
+#   * fix 1: whitespace squished in every column (district codes were space-padded)
+#   * fix 2: a double quote inside a value becomes an apostrophe (O"KEEFE -> O'KEEFE)
 #   * nothing else changes; values are as delivered (dates stay M/D/YYYY)
 # Checks: row count equals the raw line count. ms_voters_compare.py then checks, streaming, that every value
 # matches the indexed file once the same fixes are applied to it.

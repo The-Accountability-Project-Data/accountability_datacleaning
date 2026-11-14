@@ -98,18 +98,16 @@ here::i_am("mn/contribs/docs/mn_contribs_diary.Rmd")
 
 ## Update: October 2026
 
-Rebuilt 2026-10-28 (Claude, for the Accountability Project). See
-the script [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R) (with `mn_common.R`), which this diary now
-matches:
+Rebuilt 2026-10-28. Script: [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R) (with `mn_common.R`).
 
-* Same source link (`?download=-2113865252`, "Contributions received by all entities - 2015 to present"). It is
-  the full history, regenerated from the board's database on every download, so the whole file is rebuilt:
-  654,449 records, 2015-01-01 to 2026-10-19, UTF-8. Output `mn_contribs_2015-2026.csv` (same 19 columns).
+* Source: the same download (`?download=-2113865252`, "Contributions received by all entities - 2015 to
+  present"), the board's full history, regenerated on every download, so the whole file is rebuilt: 654,449
+  records, 2015-01-01 to 2026-10-19, UTF-8.
+* Output: `mn_contribs_2015-2026.csv`, the same 19 columns.
 * `Receipt date` is now ISO (`YYYY-MM-DD`), not m/d/Y.
-* Reader: about 50 values contain backslash-quotes. See the Read section.
+* About 50 values contain backslash-quotes; see Read.
 * **`year` is now the calendar year of the receipt date**, not the source's report `Year` (457 rows differ).
-* There is no amendment flag. The board's database keeps only the current version of an amended report, so no
-  rows are dropped as superseded.
+* There is no amendment flag. The board keeps only the current version of an amended report; no rows are dropped.
 
 _Note: this rendered copy was not re-knitted. The code shown below is from the previous build; the current
 steps are in [`mn_contribs_diary.Rmd`](mn_contribs_diary.Rmd) and [`state/mn/code/mn_contribs.R`](../../code/mn_contribs.R)._
@@ -172,6 +170,11 @@ if (!file_exists(raw_csv)) {
 ```
 
 ## Read
+
+The download is standard CSV, where `""` escapes a quote. A few dozen values instead write a quote as a
+backslash-quote (`\"`), and others end with a literal backslash (`...Campaign Website\",`). A backslash-quote not
+followed by a comma or line break is read as an escaped quote: its quote is doubled before parsing. The backslash
+is kept, as published.
 
 ``` r
 mnc <- read_delim(
@@ -393,9 +396,8 @@ glimpse(mnc[c(which.max(mnc$amount), which.min(mnc$amount)), ])
 
 ### Dates
 
-Since the `year` variable already exists, there is no need to create
-one. Any of these which do not match seems to fall near beginning of the
-year.
+The source `Year` is the report year. Since October 2026, `year` is the calendar year of the receipt date. These
+are the rows where the two differ.
 
 ``` r
 mean(mnc$year == year(mnc$date))

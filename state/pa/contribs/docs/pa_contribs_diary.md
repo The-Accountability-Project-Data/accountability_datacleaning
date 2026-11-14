@@ -1390,3 +1390,20 @@ The following table describes the variables in our final exported file:
 | `fil_city_clean` | `character` | Normalized Filer state abbreviation    |
 | `con_zip_clean`  | `character` | Normalized Filer city name             |
 | `fil_zip_clean`  | `character` | Normalized contributor city name       |
+
+
+## Update: November 2026
+
+_Appended 2026-11-10. The 2000-2022 file built in 2023 (`pa_contribs_clean.csv`) is kept, and the 2023-2026
+reports are added as `pa_contribs_2023-2026.csv`, 4,292,886 rows._
+
+- **Source:** the Department of State's yearly full exports, 2023.zip - 2026.zip, from the
+  [campaign finance data page](https://www.pa.gov/agencies/dos/resources/voting-and-elections-resources/campaign-finance-data),
+  retrieved 2026-11-10. Layout in `readme-cf-data.txt`. Read as Windows-1252.
+- **Superseded reports dropped:** for each filer, year (`EYEAR`) and cycle (`CYCLE`), only the latest report
+  (latest `SubmittedDate`, then highest `CampaignFinanceID`) is kept, with its contributions. Reports are keyed by
+  `CampaignFinanceID` and `EYEAR` (report 432861 is in both the 2025 and 2026 filer files).
+- **Columns:** the same columns as `pa_contribs_clean.csv`; filer columns come from the row's own report. Dates are
+  `YYYYMMDD` in the source.
+- **Addresses:** `ADDRESS1` and `ADDRESS2` are blank in the 2023-2026 exports (all but 8 rows), so the contributor and filer street
+  address columns are blank. City and ZIP are normalized as above.

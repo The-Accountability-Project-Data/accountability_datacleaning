@@ -1259,31 +1259,25 @@ unname(aws_size == clean_size)
 
 ## Update: October 2026
 
-_Rebuilt 2026-10-12 (re-read with the correct encoding 2026-10-13) for The Accountability Project (Claude, for Jacob
-Fenton); published 2026-10-15. The runnable script is [`code/il_contribs.R`](../code/il_contribs.R); the steps above
+_Rebuilt 2026-10-13; published 2026-10-15. Script: [`code/il_contribs.R`](../code/il_contribs.R); the steps above
 are unchanged except as noted here. Output: 34 yearly files, `il_contribs_pre1994.csv` and `il_contribs_1994.csv`
 through `il_contribs_2026.csv`, 3,865,415 rows in all, the same 41 columns in the same order as the 2023 file._
 
-The source is the same State Board of Elections bulk download (`Receipts.txt`, downloaded 2026-10-11, 1.06 GB), with
-the recipient committee joined from `Committees.txt` as before. Changes to the recipe:
+The source is the State Board of Elections bulk download (`Receipts.txt`, downloaded 2026-10-11, 1.06 GB), with the
+recipient committee joined from `Committees.txt` as before. Changes:
 
-1. **Superseded records are dropped** (decision, 2026-10-12). The board marks every line item of a report that was
-   replaced by an amendment `Archived = TRUE`. An amendment re-files the whole report, so keeping the archived rows
-   counts those items twice. 2,678,764 of the 6,544,179 records in the bulk file (41%) are archived and dropped;
-   3,865,415 current records are kept. (The 2023 build kept them.)
-2. **Encoding.** The bulk files (`Receipts.txt`, `Committees.txt`) are windows-1252, not UTF-8 (for example `0xe9`
-   for the é in "Café", `0x93`/`0x94` curly quotes). Every `read_delim()` now passes
-   `locale = locale(encoding = "windows-1252")`, so the output is valid UTF-8.
-3. **Broken lines.** The hand fixes in the Fix section above (specific line numbers in the 2021 file) no longer
-   apply. A small shell script, run before reading, joins continuation lines (19 in this file) and sets aside lines
-   with a stray tab (9 lines, 5 of them superseded records), so about 6 current contributions are not in this build.
-   That script is [`state/il/code/repair.sh`](../../code/repair.sh); the 9 lines it set aside (from the 2026-10-12 download)
-   are listed in `datacleaning_agents/ec2/il/box_2026-10-13/work/Receipts-rejects.txt`.
-4. **Duplicates** are flagged the same way (identical on every column except `id`, which includes the date) by
-   hashing each row rather than splitting by date. 65,925 rows (1.7%) are flagged; `na_flag` is 0 for every row.
-5. **One file per year.** The output is split by `rcv_year`; years before 1994 go into `il_contribs_pre1994.csv`.
-   That file holds 5 records with typo years (1903, 1989-1992), kept as filed, so the dataset's coverage is given as
-   1994-2026.
+1. **Superseded records are dropped.** When a report is amended, the amendment re-files the whole report and the
+   board marks every line item of the replaced report `Archived = TRUE`. 2,678,764 of the 6,544,179 records (41%)
+   are archived and dropped; 3,865,415 are kept. (The 2023 build kept them.)
+2. **Encoding.** `Receipts.txt` and `Committees.txt` are windows-1252 (for example `0xe9` for é, `0x93`/`0x94`
+   curly quotes) and are read with `locale = locale(encoding = "windows-1252")`. The output is UTF-8.
+3. **Broken lines.** The line-number fixes in the Fix section above no longer apply. Before reading,
+   [`state/il/code/repair.sh`](../../code/repair.sh) joins continuation lines (19) and sets aside lines with a stray
+   tab (9 lines, 5 of them superseded records). A handful of current contributions are not in this build.
+4. **Duplicates** are flagged as before (identical on every column except `id`), by hashing each row. 65,925 rows
+   (1.7%) are flagged. `na_flag` is 0 for every row.
+5. **One file per year**, split by `rcv_year`. Years before 1994 go into `il_contribs_pre1994.csv`: 5 records with
+   typo years (1903, 1989-1992), kept as filed. Coverage is 1994-2026.
 
 ``` r
 ilc <- read_delim(

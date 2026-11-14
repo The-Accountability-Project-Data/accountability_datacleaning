@@ -457,20 +457,16 @@ unname(aws_size == clean_size)
 
 ## Update: October 2026
 
-The 2024 edition (`GPO-PLUMBOOK-2024`, issued 2024-11-12, data as of June 30, 2024) was added as a second file,
-`us_plum_book_2024.csv`, in the same dataset (370). It has the same 20 columns in the same order as
-`us_plum_book.csv`. This first file holds only the 2020 edition (every row is year 2020), not 2016–2020.
-The build script is [`code/us_plum_book_2024.R`](../code/us_plum_book_2024.R) (run 2026-10-28). It has
-8,085 rows.
+The 2024 edition (`GPO-PLUMBOOK-2024`, issued 2024-11-12, data as of June 30, 2024) is added as a second file,
+`us_plum_book_2024.csv`, 8,085 rows, with the same 20 columns in the same order as `us_plum_book.csv`. The first
+file holds only the 2020 edition. Script: [`code/us_plum_book_2024.R`](../code/us_plum_book_2024.R).
 
-Source: `https://www.govinfo.gov/content/pkg/GPO-PLUMBOOK-2024.zip`, `xls/GPO-PLUMBOOK-2024-6..9.xlsx`, with the same
-four files and twelve headers as 2020. The 2024 spreadsheets differ from 2020 in these ways, and the steps above
-were changed:
+Source: `https://www.govinfo.gov/content/pkg/GPO-PLUMBOOK-2024.zip`, `xls/GPO-PLUMBOOK-2024-6..9.xlsx` (the same
+four files and twelve headers as 2020). Differences from 2020, and changes to the steps above:
 
 * `here::i_am()` must point at `national/plum_book/docs/us_plum_book.Rmd` (the diary moved from `us/`).
 * Every cell is padded with spaces, and empty cells are runs of spaces. Squish all columns and turn `""` into `NA`.
-* 2,968 rows are entirely blank and 179 are agency heading rows (agency and ID only, no title or incumbent).
-  Drop both by keeping rows with a title or an incumbent.
+* 2,968 entirely blank rows and 179 agency heading rows (no title or incumbent) are dropped.
 * `expires` is text, not an Excel serial number. It comes either as `2024-10-10T00:00:00.000` or as `7/29/2026`.
 * The country in `location` is cut to four letters ("Brussels, Belg"). `location` is kept as published, and
   `country` is expanded (Belg -> Belgium, Germ -> Germany, Puer -> Puerto Rico, etc.).
@@ -496,6 +492,6 @@ country_4 <- c(Belg = "Belgium", Germ = "Germany", Puer = "Puerto Rico", Ital = 
 pb <- mutate(pb, country = coalesce(unname(country_4[country]), country))
 ```
 
-Later: OPM's PLUM Act site (`https://escs.opm.gov/escs-net/api/pbpub/download-data`, the "All Data (CSV)" link on
+OPM's PLUM Act site (`https://escs.opm.gov/escs-net/api/pbpub/download-data`, "All Data (CSV)" on
 opm.gov/about-us/open-government/plum-reporting/plum-data/) publishes current positions with incumbents' begin and
-vacate dates. It has a different layout and would be a separate dataset.
+vacate dates, in a different layout.
