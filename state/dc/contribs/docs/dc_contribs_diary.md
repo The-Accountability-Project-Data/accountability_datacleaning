@@ -515,3 +515,39 @@ s3_head <- head_object(s3_path, "publicaccountability")
 unname(s3_size == clean_size)
 #> [1] TRUE
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `dc_contribs_2003-2026.csv`, which replaces `dc_contribs_clean.csv`
+and `dc_contribs_20230517.csv`. Those came from DC's open data layer; this build uses the e-filing search.
+
+**Source.** The data comes from the DC Office of Campaign Finance [Contribution and Expenditure
+Search](https://efiling.ocf.dc.gov/ContributionExpenditure), all filer types, through its Excel export. On November
+20, 2026, every contribution was downloaded in calendar-year windows, 2003 through 2026; the windows before 2003 and after
+2026 were empty. The search's CSV export is not used: it is UTF-16 and leaves out Payee Organization Name. DC's open data
+layers ("Campaign Financial Contributions" and "Campaign Financial Expenditures") are not used either: their amounts
+are whole dollars and the expenditures have no committee. Their totals were a check: 309,865 rows here, 309,787 in the open data of November 16, 2026.
+
+**Reading.** `state/dc/code/reparse.py` turns the workbooks into one CSV, placing each value by its cell reference
+(the workbooks leave empty cells out). Every column is read as text and an empty field is read as missing; line
+breaks inside a field become a space. Letter case and everything else are kept as published. Amounts such as
+"$1,234.50" become numbers, and dates are written as YYYY-MM-DD. The code is in `state/dc/code/`: `reparse.py`,
+`dc_common.R`, `dc_contribs.R`.
+
+**Rows.** Every contribution, as published, including about 1,500 $0.00 rows with no contributor that come from
+committees' empty reports (mostly 2022 and 2024).
+
+**Columns.** New layout: the 16 source columns in snake case (`committee_name`, `contributor_first_name`,
+`contributor_middle_name`, `contributor_last_name`, `contributor_organization_name`, `contributor_street`,
+`contributor_city`, `contributor_state`, `contributor_zipcode`, `contributor_type`, `contribution_type`,
+`employer_name`, `employer_address`, `occupation`, `receipt_date`, `amount`), then `contributor_name` (first, middle
+and last name, or the organization name when there is no person's name), `na_flag`, `dupe_flag`, `year`, and
+`address_clean`, `city_clean`, `state_clean` and `zip_clean` for the contributor: 24 columns.
+
+**Cleaning.** `na_flag` on `receipt_date`, `amount`, `contributor_name` and `committee_name`. `dupe_flag` on every
+source column, all copies flagged. `year` from `receipt_date`. Address, ZIP code, state and city normalized; the city
+is swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the
+refined city, state and ZIP code are a valid combination.
+
+**Result.** 309,865 contributions, 2003-01-01 to 2026-11-02, 24 columns, UTF-8. `na_flag` 2,480 rows; `dupe_flag`
+4,568 rows.

@@ -1179,3 +1179,25 @@ va %>%
     path = str_c(proc_dir, "va_expends.csv", sep = "/")
   )
 ```
+
+## Update: November 2026
+
+_Rebuilt 2026-11-15. Replaces `va_expends_clean.csv`. Output: `va_expends_2012-2026.csv`, 1,343,388 rows. Code:
+[`state/va/code/`](../../code/) (`reparse.py`, `va_common.R`, `va_expends.R`)._
+
+- **Source:** Schedule D of every monthly folder of the [ELECT bulk files][elect_csv], `2012_03` (the first monthly
+  folder) to `2026_11`, downloaded 2026-11-14 and 15, joined to `Report.csv` on the report ID. The state regenerates
+  every month's files daily, so all months were downloaded again.
+- **Coverage:** all years from 2012 come from this download. The previous file had only a few thousand rows a year
+  before 2019.
+- **Amended reports:** an amendment restates the whole report, and all versions of a report share `ReportUID`. Only the
+  current version of each report is kept (highest `AmendmentCount`). The 515,596 rows on superseded report versions are
+  dropped.
+- **Reading:** every field is quoted, and quotes inside a field are not escaped, so records are split on `"\r\n"` and
+  fields on `","`. Quotes inside a field are kept as published. The files are ASCII or Windows-1252 and are read as
+  Windows-1252. Output is UTF-8.
+- **Columns:** the same 40 columns, in the same order, as `va_expends_clean.csv`. `com_city_raw` is the payee's city as
+  filed and `com_city` the committee's.
+- Rows identical in every column but `schedule_d_id` are flagged in `dupe_flag` (23,177) and kept.
+
+[elect_csv]: https://apps.elections.virginia.gov/SBE_CSV/CF/

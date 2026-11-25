@@ -849,3 +849,31 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 2011 through 2026 into one file, `mo_expends_2011-2026.csv`, which replaces
+`mo_expends_clean.csv`. The code is in `state/mo/code/`: `mo_common.R` and `mo_expends.R`.
+
+**Source.** The Missouri Ethics Commission's [Export to CSV page](https://www.mec.mo.gov/MEC/Campaign_Finance/CF_ContrCSV.aspx):
+"Itemized Expenditures Over $100 – Form CD3 Part B", exported for each year from 2011 to 2026 on November 17, 2026.
+
+**Reading.** The files are UTF-8 with every field in quotes; an empty field is read as missing. The CD3_B IDs are
+unique across all years. 503,767 rows.
+
+**Amendments.** Amended reports list only the items that changed: 31 of the 22,633 rows on them repeat a row of the
+original report. All rows are kept.
+
+**Columns.** The 28 columns of the earlier file, in the same order: the source headers in snake case (city as
+`city_raw`), `adress_full` (address lines 1 and 2 joined with a space), `individual` (last name, else first name),
+`payee_name` (individual, else company), `na_flag`, `dupe_flag`, `date_flag`, `date_clean`, `year_clean`,
+`address_norm`, `zip_norm`, `state_norm`, `city_final`. `date` is written as YYYY-MM-DD and `amount` as a number.
+
+**Cleaning.** `na_flag` on `payee_name`, `committee_name`, `date` and `amount`. `dupe_flag` on every source column but
+`cd3_b_id`, all copies flagged. `date_flag` marks dates before 2010 or after November 17, 2026; `date_clean` leaves them
+out and `year_clean` is its year. Addresses, ZIP codes, states and cities normalized; the city is swapped with the ZIP
+code's city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code
+are a valid combination.
+
+**Result.** 503,767 rows, 28 columns, 141 MB, UTF-8. `na_flag` 5 rows; `dupe_flag` 5,516; `date_flag` 66. 374,755 of the
+374,981 IDs in the earlier file are in the new file; 2023 to 2026 are new.

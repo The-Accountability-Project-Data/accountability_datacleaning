@@ -1081,3 +1081,34 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `nm_expends_2003-2026.csv`, which replaces `nm_expends_2000-20210817.csv`.
+
+**Source.** The New Mexico Secretary of State's Campaign Finance Information System (CFIS),
+<https://login.cfis.sos.state.nm.us>, Data Download: one CSV per transaction year, 2020 to 2026, of expenditures. The files
+were downloaded on November 23, 2026. Their columns are the ones used above. This system holds the reports filed in it,
+from 2020 on. Rows of the earlier build from the decommissioned CFIS (no transaction ID; reports through June 2020)
+are kept, as published then and with their clean columns, as are its few rows with an ID dated before 2020. Its rows
+from the current system (with an ID, dated 2020 on) are replaced by the new files. An earlier row that matches a new
+row (same candidate last name or committee, payee name, date and amount, ignoring letter case and punctuation) is left
+out.
+
+**Reading.** `state/nm/code/reparse.py` joins the files of each kind. Each record is one line. A line with a value
+that opens a quote it never closes (such as `"2024 Lakewood Avenue NW`) is regrouped into the header's fields;
+there were 3 such lines. Every column is read as text and an empty field is read as missing. Letter case and
+everything else are kept as published. Amounts become numbers and transaction dates are written as YYYY-MM-DD.
+
+**Rows.** New: 404,666 expenditures. Earlier build: 411,773 rows kept (388,859 dated before 2020, 22,865 from the
+earlier system's 2020 reports), of which 49 match a new row and are left out. Expenditures with no payee name are
+kept and flagged.
+
+**Cleaning.** `na_flag` on `expenditure_date`, `expenditure_amount`, the payee's name, and the committee or candidate
+name. New rows: `dupe_flag` on every column except `expenditure_id`, all copies flagged; the payee's address, ZIP
+code, state and city normalized as above. Earlier rows keep their `dupe_flag` and clean columns.
+`expenditure_year` is the year of `expenditure_date`. The code is in `state/nm/code/`: `reparse.py`,
+`nm_common.R`, `nm_expends.R`.
+
+**Result.** 816,390 expenditures, 39 columns (the same as above), UTF-8, dated 2003 to 2026 (and a few earlier and
+impossible dates as published). `na_flag` 285 rows; `dupe_flag` 33,232 rows.

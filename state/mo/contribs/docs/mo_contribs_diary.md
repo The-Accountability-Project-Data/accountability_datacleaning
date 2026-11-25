@@ -725,3 +725,32 @@ s3_head <- head_object(s3_path, "publicaccountability")
 (s3_size <- as_fs_bytes(attr(s3_head, "content-length")))
 unname(s3_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 2011 through 2026 into one file, `mo_contribs_2011-2026.csv`, which replaces
+`mo_contribs_clean.csv` and `mo_contribs_clean_2020-2022.csv`. The code is in `state/mo/code/`: `mo_common.R` and
+`mo_contribs.R`.
+
+**Source.** The Missouri Ethics Commission's [Export to CSV page](https://www.mec.mo.gov/MEC/Campaign_Finance/CF_ContrCSV.aspx)
+gives one file per report type and year. "Itemized Contributions Received – Form CD1 Part A" was exported for each
+year from 2011 to 2026 on November 17, 2026.
+
+**Reading.** The files are UTF-8 with every field in quotes; an empty field is read as missing. The CD1_A IDs are
+unique across all years, so no row appears in more than one year's file. 2,280,837 rows.
+
+**Amendments.** Amended reports ("AMENDED July Quarterly Report" and so on) list only the items that changed: 196 of
+the 47,834 rows on them repeat a row of the original report. All rows are kept.
+
+**Columns.** The 25 columns of `mo_contribs_clean_2020-2022.csv`: the source headers in snake case, then `na_flag`,
+`dupe_flag`, `year`, `address_clean`, `zip_clean`, `state_clean`, `city_clean`. `date` is written as YYYY-MM-DD and
+`amount` as a number.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `committee_name`, `address_1` and the contributor (missing when
+`last_name`, `company` and `committee`, the contributing committee, are all empty). `dupe_flag` on every column but
+`cd1_a_id`, all copies flagged. `year` from `date`. Addresses, ZIP codes, states and cities normalized; the city is
+swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the refined
+city, state and ZIP code are a valid combination.
+
+**Result.** 2,280,837 rows, 25 columns, 544 MB, UTF-8. `na_flag` 1 row; `dupe_flag` 29,856 rows. 1,495,782 of the
+1,498,088 distinct IDs in the earlier files are in the new file; 2023 to 2026 are new.

@@ -883,3 +883,42 @@ dict_raw <- tibble(
   col.names = c("Column", "Original", "Type", "Definition")
 ))
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 1991 through 2026 into one file, `oh_contribs_1991-2026.csv`, which replaces
+`oh_contribs_clean.csv`. The code is in `state/oh/code/`: `reparse.py`, `oh_common.R` and `oh_contribs.R`.
+
+**Source.** Ohio's campaign finance records moved to the [Ohio Campaign Finance System](https://campaignfinance.ohiosos.gov);
+the old CFDISCLOSURE download pages no longer work. The [Download Bulk Data page](https://campaignfinance.ohiosos.gov/public/cf/downloads)
+has one Contributions file per year under "All Candidate & Non-Candidate Committee Files" (candidates, PACs, parties
+and other committees together). The files for 1991 to 2026 were downloaded November 16, 2026. The 1990 download
+returns an error and the 2000 file contains only a header (checked again November 17, 2026), so those two years are
+not included.
+
+**Reading.** The files share one header of 33 columns. Records end with CRLF; fields are wrapped in quotes only when
+they hold a comma, and quotes inside values are not escaped (`"PATEL, NIRANJAN "NEIL""`), so the files are read with
+`reparse.py`, which reads a quoted field up to the next `",`. 250,462 records have a bare line feed inside a field
+(mostly 2010), which is kept; 15 records have a CRLF inside a field and are rejoined; 4 records with stray quotes are
+split where the date, amount and amended columns fall in place. No record is dropped. ZIP codes are exported as
+`="44484"`; the wrapper is removed. The files are UTF-8 except one windows-1252 character in 1995. 14,340,793 rows.
+
+**Amendments.** The export holds the current version of each report. `amended` is "Y" on 4,842,152 rows, marking rows
+on reports that were amended; all rows are kept.
+
+**Columns.** New layout: the 33 source columns with their headers in snake case, in the source order, then
+`contributor_name`, `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`. Dates
+are written as YYYY-MM-DD and `transaction_amount` as a number. The new source has no contributor occupation or
+employer, candidate office, district or party, event date or report key, which the earlier file had.
+
+**Cleaning.** `contributor_name` is the contributor's entity name, or first, middle and last name. `na_flag` on
+`transaction_date`, `contributor_name`, `transaction_amount` and `filing_entity_name`; `dupe_flag` on every column but
+`transaction_id`, within each year's file, all copies flagged; `year` from `transaction_date`. When no address was
+given the export writes "NA" in every address field; that is missing in the clean columns. Addresses, ZIP codes,
+states (with Canadian provinces) and cities normalized. The city is swapped with the ZIP code's city when it is an
+abbreviation of it or one edit away, then refined where the refined city, state and ZIP code are a valid combination.
+
+**Result.** 14,340,793 rows, 41 columns, 5.14 GB, UTF-8. `na_flag` 755 rows; `dupe_flag` 869,694 rows, of which
+140,921 are one committee's 1998 report that lists every item twice under different transaction IDs; they are kept as
+published. Compared with the earlier file (12,063,373 rows for 1990-2022), the counts for 1991-2022 are within a few
+percent year by year; 2023 to 2026 (2,673,081 rows) are new.

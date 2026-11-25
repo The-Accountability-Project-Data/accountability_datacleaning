@@ -900,3 +900,49 @@ The following table describes the variables in our final exported file:
 | `zip_clean`   |                    | `character` | Normalized 5-digit ZIP code                   |
 | `state_clean` |                    | `character` | Normalized 2-digit state abbreviation         |
 | `city_clean`  |                    | `character` | Normalized city name                          |
+
+## Update: November 2026
+
+The data was rebuilt into `md_expends_2005-2026.csv`, which replaces `md_expends_clean.csv` (and `md_expends_clean_202007-202306.csv`, which was never loaded).
+
+**Source.** The Maryland State Board of Elections replaced the Campaign Reporting Information System search used
+above with a new system at <https://campaignfinance.maryland.gov/>, whose "Download Data" page offers one CSV per
+filing year. Filing years 2021 to 2026 were downloaded on November 22, 2026; filing years 2019 and 2020
+come back empty, and the new system's data begins with transactions in 2020. Comparing month by month with the
+earlier builds, the new contributions are complete from January 2020 and the new expenditures from December 2020.
+Rows of the earlier builds dated before then are kept, as published then and with their clean address columns; their
+name and address are one field each. A new row dated before then that matches an earlier row (same date and amount,
+and the same contributor, payee or vendor, or the same committee, ignoring letter case and punctuation) is left out,
+since the earlier row is kept; the others are kept. The column `source` says "earlier" or "2026".
+
+**Reading.** `state/md/code/reparse.py` joins the files of each kind. The first line of each file is a title. A
+record starts at a line that begins with a numeric filing entity ID; other lines continue the record before it (line
+breaks inside fields), joined with a space. Records that are not valid UTF-8 are read as Windows-1252. The export
+writes a curly apostrophe (as in O'Connor) 16 times as the bytes ",Äô", whose comma adds a field; these become the
+apostrophe again. Values written as Excel formulas, such as `="21401"`, are unwrapped. Records with stray quotes are
+regrouped into the header's fields. Every column is read as text and an empty field is read as missing. Letter case
+and everything else are kept as published. Amounts become numbers and dates are written as YYYY-MM-DD.
+
+**Rows.** New: every expenditure, outstanding obligation, return and payment in the "Expenditures & Outstanding
+Obligations" files, 356,662 rows. Of the 11,095 new expenditures dated before December 2020, 6,140 match an earlier
+row and are left out; 4,955 are kept (mostly January to June 2020, filed after the earlier build was made in July
+2020). Earlier: 681,189 expenditures dated before December 2020.
+
+**Columns.** The new files' columns in snake case: `filing_entity_id`, `committee_name`, `abbreviated_committee_name`,
+`committee_type`, `payee_type`, `payee_company_name`, `payee_last_name`, `payee_first_name`, `payee_middle_name`,
+`payee_country`, `payee_address1`, `payee_address2`, `payee_city`, `payee_state`, `payee_zip`, `vendor_type`,
+`vendor_name`, `vendor_country`, `vendor_address1`, `vendor_address2`, `vendor_city`, `vendor_state`, `vendor_zip`,
+`transaction_type`, `date`, `amount`, `category`, `purpose`, `fund_type`, `description`, `pay_in_kind_contribution`,
+`committee_filing_entity_id`, `report_name`, `candidate_ballot_issue`, `office_sought`, `position`, `amount_applied`,
+`filing_year`, `payee_name` (the company, or "LAST, FIRST MIDDLE"); the earlier build's `earlier_toward` and
+`earlier_method`; `source`, `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`,
+`zip_clean`. For earlier rows, `payee_name`, `payee_address1`, `payee_type`, `committee_name`, `vendor_name`,
+`fund_type` and `description` hold the earlier build's payee, address, type, committee, vendor, fund type and
+comments. The payee is who was paid (a candidate reimbursed, for example); the vendor is who was paid in the end.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `payee_name` and `committee_name`. New rows: `dupe_flag` on every column,
+all copies flagged; the payee's address, ZIP code, state and city normalized as for contributions. Earlier rows keep
+their `dupe_flag` and clean columns. The code is in `state/md/code/`: `reparse.py`, `md_common.R`, `md_expends.R`.
+
+**Result.** 1,031,711 expenditures, 49 columns, UTF-8. `na_flag` 9,740 rows (no payee name: 8,092 new, 1,648
+earlier); `dupe_flag` 33,334 rows.

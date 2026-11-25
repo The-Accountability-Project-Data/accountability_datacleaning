@@ -770,3 +770,41 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `me_expends_2008-2026.csv`, which replaces `me_expends_clean.csv`.
+
+**Source.** The Maine Ethics Commission replaced the system used above (mainecampaignfinance.com, which no longer
+serves data) with Maine Campaign Finance Disclosure, <https://www.mainecampaignfinancedisclosure.com>, built by
+MapLight. Its All Transactions table holds itemized transactions from 2018 on; for 2017 and earlier it refers people
+to the Commission. The table downloads as CSV, at most 10,000 rows at a time, so it was downloaded on November 24,
+2026 in a web browser as 136 files by transaction date (each window under 10,000 rows): 649,907 transactions,
+contributions and expenditures together, every one itemized. The files are joined, and the columns are renamed to
+snake case. Every column is read as text and an empty field is read as missing. Letter case and everything else are
+kept as published. Amounts become numbers.
+
+Rows of the earlier build dated before 2018 are kept, as published then and with their clean columns, renamed to the
+new columns where they hold the same thing; `earlier_committee_type`, `earlier_report` and `earlier_filed_date`
+keep three earlier columns, and `source` says "earlier" or "2026". Committee IDs are as published by each system
+(numeric before 2018, `f_...` from 2018).
+
+**Rows.** New: the transactions paid out, 173,271 rows (expenditures, independent expenditures, debt and loan
+payments, returned contributions, returns of Maine Clean Election Act funds and debts). Earlier: all 162,447 rows
+(dated 2008 to 2017). The earlier payee name is written first, middle, last, as the new system writes names.
+
+**Columns.** As for contributions: `transaction_id`, `filer_id`, `filer_name`, `filer_office`, `filer_district`,
+`filer_county`, `transaction_type`, `itemized`, `transaction_date`, `amount`, `election`, `description`,
+`contact_type`, `contact_name`, `contact_street_address_1`, `contact_street_address_2`, `contact_city`,
+`contact_state`, `contact_zip`, `occupation`, `occupation_other`, `employer_name`, `purpose`, `targets`,
+`earlier_committee_type`, `earlier_report`, `earlier_filed_date`, `source`, `na_flag`, `dupe_flag`, `year`,
+`address_clean`, `city_clean`, `state_clean`, `zip_clean`. The filer is the candidate or committee that paid; the
+contact is the payee. `targets` names the candidates or ballot questions an independent expenditure supports or
+opposes.
+
+**Cleaning.** `na_flag` on `transaction_date`, `amount`, `contact_name` and `filer_name`. New rows: `dupe_flag` on
+every column except `transaction_id`, all copies flagged; the payee's address, ZIP code, state and city normalized
+as above. Earlier rows keep their `dupe_flag` and clean columns. The code is in `state/me/code/`: `me_common.R`,
+`me_expends.R`.
+
+**Result.** 335,718 rows, 35 columns, UTF-8, dated 2008 to 2026. `na_flag` 34 rows; `dupe_flag` 8,305 rows.

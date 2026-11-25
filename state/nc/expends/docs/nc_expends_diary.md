@@ -714,3 +714,45 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into two files, `nc_expends_1989-2022.csv` and
+`nc_expends_2023-2026.csv`, which replace `nc_expends_clean.csv`, `nc_expends_2020-04-28.csv` and
+`nc_expends_2022-10-14.csv` (the last also held receipts).
+
+**Source.** The North Carolina State Board of Elections [Advanced Transaction
+Search](https://cf.ncsbe.gov/CFTxnLkup/AdvancedSearch/) was rebuilt after the 2022 update, and the export used
+above (`/CFTxnLkup/ExportResults/?Params=`) no longer exists. Its "Export to .CSV" button now posts the search to
+`/CFTxnLkup/Export`. On November 20, 2026, every transaction was downloaded in transaction-date windows: years before
+1990 together, then years, quarters or months, and the dates before 1900 and after 2026 (typos) on their own. Receipts and
+expenditures were fetched separately. Their transaction type names overlap (Debt Payment, Refund/Reimbursement,
+Building Fund), and the 2022 update asked for both at once, so its files mixed the two. Each window's row count
+matched the site's count for that period. The site holds transactions back to 1989.
+
+**Reading.** The export is UTF-8 with 24 columns. It does not quote line breaks inside a field, so 8 expenditure
+records whose Purpose holds one came out split over two lines; `state/nc/code/reparse.py` rejoins them and stacks the
+windows into one file per type. Every column is read as text and an empty field is read as missing. Line breaks
+inside a field become a space. Letter case, the "Not Available" and "---" placeholders, and everything else are kept
+as published; the earlier builds uppercased every field. The code is in `state/nc/code/`: `reparse.py`,
+`nc_common.R`, `nc_expends.R`.
+
+**Unitemized expenditures are left out.** North Carolina committees may report non-media expenditures of $50 or less
+in an aggregated amount, without the payee (G.S. 163-278.8). They appear as rows named "Aggregated Non-Media
+Expenditure", mostly bank and card processing fees. There were 308,144 such rows, 15% of all expenditures, totalling
+$5,247,553 (about 0.2% of the dollars). Rows whose payee name is "aggregate(d)" followed by "non-media",
+"expenditure(s)", "expense(s)" or "exp" (any case, spaced or hyphenated) are dropped; 138 rows with misspelled
+variants or a payee named alongside ("DUKE ENERGY ... AGGREGATED NON MEDIA EXPENSE") are kept.
+
+**Columns.** The 36 columns of the earlier build in its order (`payee_name` ... `declaration`, `supports`,
+`na_flag`, `dupe_flag`, `year`, then the clean address, state, ZIP and city columns). `payee_*` is who was paid,
+`comm_*` the paying committee (`comm_id` is its SBoE ID). `supports` is TRUE where `declaration` is "Support".
+`date` is written as YYYY-MM-DD and `amount` as a number.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `payee_name` and `comm_name`. `dupe_flag` on every source column, all
+copies flagged. `year` from `date`. Addresses, ZIP codes, states and cities normalized for both parties, with the
+same city swap and refine as the contributions.
+
+**Result.** 1,747,658 expenditures, 36 columns, UTF-8: `nc_expends_1989-2022.csv` 1,485,813 rows, including the 19
+rows dated before 1900; `nc_expends_2023-2026.csv` 261,845 rows, including the 109 rows dated after 2026. Dates are
+as published. `na_flag` 1,152 rows; `dupe_flag` 48,406 rows.

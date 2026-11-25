@@ -883,3 +883,43 @@ data_dict_clean <-
   format = "markdown",
   col.names = c("Column", "Type", "Definition")))
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 2002 through November 2026 as one file, `ma_contribs_2002-2026.csv`, which replaces
+`ma_contribs_clean.csv` (2002-2020) and `ma_contribs_clean_2020-2023.csv`. Code: `state/ma/code/` (`reparse.py`,
+`ma_common.R`, `ma_contribs.R`), run from the repository root:
+
+```
+python3 state/ma/code/reparse.py state/ma
+Rscript state/ma/code/ma_contribs.R
+```
+
+**Source.** The OCPF yearly files `https://ocpf2.blob.core.windows.net/downloads/data2/ocpf-<YEAR>-reports.zip` for
+2002-2026 (there are none for earlier years), retrieved November 15, 2026, unzipped to `state/ma/data/raw/<YEAR>/`.
+The Microsoft Access database used for the 2020 file is no longer published. OCPF's readme: "The records found in
+the accompanying files are from the latest version of reports. Data from reports that have been amended has been
+excluded." There is no separate amendment step.
+
+**Reading.** The files are tab-delimited UTF-8 with a trailing tab; records end in `\r\n`. Text fields are quoted,
+with no quotes inside them; `reparse.py` removes the enclosing quotes and stacks the years into one CSV. A few
+fields contain a line break or vertical tab, kept as published.
+
+**Record types.** 201-207, 210, 211, 220, 230, 303, 319, 401-403: the types in either earlier file.
+
+**Columns.** The 32 columns of the 2020-2023 file, in its order, plus three from the report after `recip_any` (35 in all): `id`, `rpt_id`, `record_type_id`, `date`, `amount`,
+`last`, `first`, `address`, `city`, `state`, `zip`, `description`, `cpf_id` (the contributor's CPF ID), `occupation`,
+`employer`, `officer`, `tender` (tender type name), `clarified_name`, `clarified_purpose`, `is_supported`,
+`is_previous_year_receipt`, `cont_type` (record type name), `recip_any` (the report's `OCPF_Full_Name`), `recip_cpf_id` (the report's `CPF_ID`: the receiving committee; on bank reports `Filer_CPF_ID` is the bank's), `comm_name` (`OCPF_Comm_Name`), `cand_name` (`OCPF_Candidate_First_Name` and `_Last_Name`; blank for committees without a candidate: 57% of rows have one), `rpt_type`,
+`contrib_any` (first and last name), `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`,
+`zip_clean`. The 2020 file's committee address, office, district and category columns are not in the source and are
+not in this file.
+
+**Cleaning.** As above: `na_flag` on `contrib_any`, `recip_any`, `date` and `amount`; `dupe_flag` on every column but
+`id`; `year` from `date`; addresses, ZIP codes, states and cities normalized. A refined city is kept only where the
+refined city, state and ZIP code are a valid combination for that row.
+
+**Result.** 6,373,808 rows (na_flag 32,542; dupe_flag 464,894), UTF-8. Dates 2002-2026, plus a few dated earlier
+or later as filed. 60,570 rows of the earlier files are not in this one: 47,622 were on reports later amended,
+12,686 on reports no longer in the files (4,252 dated 2001, a year with no yearly file), and 262 were removed from
+reports still in the files.

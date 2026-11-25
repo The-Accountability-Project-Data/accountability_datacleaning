@@ -904,3 +904,39 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `hi_contribs_2006-2026.csv`, which replaces `hi_contribs_clean.csv` and `hi_contribs_20061108-20210630.csv` (the two overlapped, so 2006 to 2021 was in the dataset twice).
+
+**Source.** The Hawaii Campaign Spending Commission's open data moved to <https://hicscdata.hawaii.gov/> and now
+holds only reports filed from January 1, 2015 on ("From January 1, 2015 Through October 19, 2026", updated October
+31, 2026). From 2015 on it matches the earlier build; before 2015 only a remnant is left (transactions dated before
+2015 on later reports). The new file therefore combines the earlier build's rows dated before January 1, 2015, as
+published then, with every row of the current datasets. A current row dated before 2015 that matches an earlier row
+(same recipient, counterparty, date and amount, ignoring letter case) is left out, since the earlier row is kept;
+the others are kept. The column `source` says "earlier" or "2026". The datasets were downloaded as CSV on November
+22, 2026.
+
+**Reading.** Every column is read as text and an empty field is read as missing; line breaks inside a field become
+a space. Letter case and everything else are kept as published. Header names are written in snake case. Amounts
+become numbers and dates are written as YYYY-MM-DD.
+
+**Rows.** Contributions received by candidates (dataset `jexd-xbcg`, 139,771 rows) and by noncandidate committees
+(`rajm-32md`, 108,530 rows). Of their 11,529 contributions dated before 2015, 11,506 match an earlier row and are
+left out; 23 are kept. From the earlier build: 153,337 contributions dated 2006 to 2014.
+
+**Columns.** The earlier build's source columns in its order: `candidate_name`, `committee_name` (the noncandidate
+committee), `contributor_type`, `contributor_name`, `date`, `amount`, `aggregate`, `employer`, `occupation`,
+`address_1`, `address_2`, `city`, `state`, `zip_code`, `non_resident_yes_or_no`, `non_monetary_yes_or_no`,
+`non_monetary_category`, `non_monetary_description`, `office`, `district`, `county`, `party`, `reg_no`,
+`election_period`, `mapping_address`, `inoutstate`, `range`; then `source`, `recipient_name` (the committee, else the
+candidate), `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `contributor_name` and `recipient_name`. `dupe_flag` on every column,
+all copies flagged. `year` from `date`. Address, ZIP code, state and city normalized for every row; the city is
+swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the refined
+city, state and ZIP code are a valid combination. The code is in `state/hi/code/`: `hi_common.R`, `hi_contribs.R`.
+
+**Result.** 390,132 contributions, 2006-11-08 to 2026-10-21, 36 columns, UTF-8. `na_flag` 0 rows; `dupe_flag` 475
+rows.

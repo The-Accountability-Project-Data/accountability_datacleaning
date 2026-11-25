@@ -970,3 +970,30 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 2008 through 2026 into one file, `ct_expends_2008-2026.csv`, which replaces
+`ct_expends_clean.csv`. The code is in `state/ct/code/`: `ct_common.R` and `ct_expends.R`.
+
+**Source.** The disbursements files on the SEEC [data download page](https://seec.ct.gov/Portal/eCRIS/CurPreYears)
+were downloaded November 17, 2026: the Party/PAC (calendar year) and Candidate/Exploratory (election year) files for
+2008 to 2026. The 2022 and 2023 files are offered only as Excel workbooks.
+
+**Reading.** As for the contributions: UTF-8 or windows-1252 decoded line by line, Excel dates written as m/d/yyyy,
+all columns as text with whitespace squished.
+
+**Amendments.** `status` is "Original" or "Amendment"; an amended report is a separate report that rarely repeats the
+rows of the earlier report, so all rows are kept.
+
+**Columns.** The 39 columns of the earlier file, in the same order: `file` (the source file name), the source headers
+in snake case (the candidate files' second Description column is `description_1`), then `amended` (status is
+"Amendment"), `efiled` (data source is eFILE), `date_clean`, `year_clean`, `na_flag`, `address_clean`, `state_clean`,
+`city_norm`, `city_clean`. Values are as published; the earlier file had them in capitals.
+
+**Cleaning.** `date_clean` from `payment_date`; `year_clean` from `date_clean`, missing outside 1998-2026. `na_flag` on
+`payee`, `amount`, `date_clean` and `committee`. Addresses, states and cities normalized; the source has no ZIP codes,
+so `city_clean` is the normalized city.
+
+**Result.** 507,862 rows, 39 columns, 223 MB, UTF-8. `na_flag` 3,767 rows; `amended` 23,181. The counts for 2008-2018
+are within a few rows a year of the earlier file, which ended partway through 2019; 2019 to 2026 are new.

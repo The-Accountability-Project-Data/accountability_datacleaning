@@ -933,3 +933,35 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 2014 through 2026 into one file, `ok_contribs_2014-2026.csv`, which replaces
+`ok_contribs_2015-20210910.csv`. The code is in `state/ok/code/`: `ok_common.R` and `ok_build.R` (run with
+`contribs`).
+
+**Source.** The Oklahoma Ethics Commission's Guardian filing system, [Data Download page](https://guardian.ok.gov/PublicSite/DataDownload.aspx):
+the yearly `<year>_ContributionLoanExtract.csv.zip` files for 2014 to 2026, extracted as of November 14, 2026 and
+downloaded November 17, 2026.
+
+**Reading.** Every field is in quotes and records end with a carriage return and line feed, but quotes inside values
+are not escaped (`"1627 I" STREET, NW"`) and values can hold line breaks. The files are split into records at a quote,
+line break and quote, and into fields at quote, comma, quote; every record has the header's 23 fields. Values are
+kept as published. The files are windows-1252 except 2014 (UTF-8). 2,380,270 rows.
+
+**Amendments.** `amended` is "a Y/N indicator to show if an amendment was filed for this record" (file layout). Each
+receipt ID appears once, so the export holds one version of each record, and all rows are kept. 1,692 rows have no
+receipt ID; they are kept.
+
+**Columns.** The 29 columns of the earlier file: the source headers in snake case, then `na_flag`, `dupe_flag`,
+`receipt_year`, `address_clean`, `city_clean`, `zip_clean`. Dates are written as YYYY-MM-DD and `receipt_amount` as a
+number; `amended` is Y or N as published.
+
+**Cleaning.** `na_flag` on `receipt_date`, `last_name` and `receipt_amount`, and on rows with neither a committee nor a
+candidate name. `dupe_flag` on every column but `receipt_id`, all copies flagged; most are "NON-ITEMIZED CONTRIBUTOR"
+rows. `receipt_year` from `receipt_date`. Addresses, ZIP codes and cities normalized; the city is swapped with the ZIP
+code's city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code
+are a valid combination.
+
+**Result.** 2,380,270 rows, 29 columns, 513 MB, UTF-8. `na_flag` 375 rows; `dupe_flag` 1,036,552. Every receipt ID of
+the earlier file is in the new file; 2021 to 2026 are new or complete.

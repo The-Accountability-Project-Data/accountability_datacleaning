@@ -686,3 +686,41 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `hi_expends_2006-2026.csv`, which replaces `hi_expends_clean.csv`.
+
+**Source.** The Hawaii Campaign Spending Commission's open data moved to <https://hicscdata.hawaii.gov/> and now
+holds only reports filed from January 1, 2015 on ("From January 1, 2015 Through October 19, 2026", updated October
+31, 2026). From 2015 on it matches the earlier build; before 2015 only a remnant is left (transactions dated before
+2015 on later reports). The new file therefore combines the earlier build's rows dated before January 1, 2015, as
+published then, with every row of the current datasets. A current row dated before 2015 that matches an earlier row
+(same recipient, counterparty, date and amount, ignoring letter case) is left out, since the earlier row is kept;
+the others are kept. The column `source` says "earlier" or "2026". The datasets were downloaded as CSV on November
+22, 2026.
+
+**Reading.** Every column is read as text and an empty field is read as missing; line breaks inside a field become
+a space. Letter case and everything else are kept as published. Header names are written in snake case. Amounts
+become numbers and dates are written as YYYY-MM-DD.
+
+**Rows.** Expenditures by candidates (dataset `3maa-4fgr`, 168,724 rows) and, new in this dataset, by noncandidate
+committees (`riiu-7d4b`, 28,329 rows); the earlier build had candidates only. Of their 7,155 expenditures dated
+before 2015, 6,818 match an earlier row and are left out; 337 are kept, nearly all from noncandidate committees.
+From the earlier build: 120,068 candidate expenditures dated 2006 to 2014. That build kept the normalized street and
+ZIP code and the city as published; for its rows they are in `address_1`, `zip_code` and `city`.
+
+**Columns.** `candidate_name`, `committee_name` (the noncandidate committee), `vendor_type`, `vendor_name`, `date`,
+`amount`, `authorized_use`, `expenditure_category`, `purpose_of_expenditure`, `independent_expenditure`,
+`candidates_named` and `support_oppose` (noncandidate committees), `address_1`, `address_2`, `city`, `state`,
+`zip_code`, `office`, `district`, `county`, `party`, `reg_no`, `election_period`, `mapping_location`, `inoutstate`,
+`source`, `spender_name` (the committee, else the candidate), `na_flag`, `dupe_flag`, `year`, `address_clean`,
+`city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `vendor_name` and `spender_name`. `dupe_flag` on every column, all
+copies flagged. `year` from `date`. Address, ZIP code, state and city normalized for every row; the city is swapped
+with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the refined city,
+state and ZIP code are a valid combination. The code is in `state/hi/code/`: `hi_common.R`, `hi_expends.R`.
+
+**Result.** 310,303 expenditures, 2006-11-08 to 2026-10-26, 34 columns, UTF-8. `na_flag` 1 row; `dupe_flag` 10,315
+rows.

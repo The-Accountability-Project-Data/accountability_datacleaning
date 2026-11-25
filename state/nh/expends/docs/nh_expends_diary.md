@@ -762,3 +762,45 @@ write_csv(
   na = ""
 )
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `nh_expends_2015-2026.csv`, which replaces `nh_expends_clean.csv`.
+
+**Source.** New Hampshire replaced the Campaign Finance System used above. The Secretary of State's new
+[Campaign Finance System](https://cfs.sos.nh.gov/) has a public [Download Data](https://cfs.sos.nh.gov/public/cf/downloads)
+page with one CSV per filing year, 2016 to 2026, for Receipts and for Expenditures. All 22 files were downloaded in a
+browser on November 21, 2026 ("extracted as it existed as of 11/21/2026 9:59 AM"); the site refuses scripted
+requests. The new
+files cover everything in the earlier build: that system also began with the 2016 election cycle, and the few
+earlier dates in both are dates filers entered.
+
+**Reading.** `state/nh/code/reparse.py` joins the files of each kind. Records end with a carriage return and line
+feed; a line that does not begin a record (a numeric filing entity ID, the next fields and a transaction type)
+continues the record before it, and line breaks inside a field become a space. Records that are not valid UTF-8 are
+read as Windows-1252. Records with stray quotes are rebuilt with the free-text description, the second-to-last
+column, taking the text left between the other fields; 8 receipts with spreadsheet formula text in them are split
+at every comma and regrouped into 22 fields. No record is left out. Every column is read as text and an empty field
+is read as missing. Letter case and everything else are kept as published. Header names are written in snake case
+and `filing_year` (from the file name) is added. Amounts such as "$1,283.55" become numbers and dates are written as
+YYYY-MM-DD.
+
+**Rows.** Every transaction in the Expenditures files: expenditures (itemized, unitemized and in-kind), independent
+expenditures and returned expenditures. 123,028 transactions.
+
+**Columns.** `filing_entity_id`, `filing_entity_name`, `filing_entity_type`, `transaction_type`,
+`transaction_sub_type`, `payee_type`, `payee_name`, `payee_address` (the source's "Payee/Worker/Creditor/Loan
+source" columns), `amount`, `transaction_date`, `election_type`, `description`, `timed_report`, `filing_year`,
+`payee_address_sep`, `payee_city_sep`, `payee_state_sep`, `payee_zip_sep`, `na_flag`, `dupe_flag`, `year`,
+`address_clean`, `city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** The payee address is one field ("street, line 2, city, ST ZIP"). It is split into the four `_sep`
+columns where it has that form (118,666 of 119,604 addresses, with a 4-digit ZIP code allowed); otherwise the whole
+value is in `payee_address_sep`. `na_flag` on `transaction_date`, `amount`, `payee_name` and `filing_entity_name`.
+`dupe_flag` on every column, all copies flagged. `year` from `transaction_date`. Address, ZIP code, state and city
+normalized from the `_sep` columns; the city is swapped with the ZIP code's city when it is an abbreviation of it or
+one edit away, then refined where the refined city, state and ZIP code are a valid combination. The code is in
+`state/nh/code/`: `reparse.py`, `nh_common.R`, `nh_expends.R`.
+
+**Result.** 123,028 transactions, 1978-09-01 to 2026-11-21 (250 before 2016), 25 columns, UTF-8. `na_flag` 4,407
+rows (no payee, mostly unitemized); `dupe_flag` 13,523 rows.

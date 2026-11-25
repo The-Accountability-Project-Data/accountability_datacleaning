@@ -5552,3 +5552,48 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 1998 through 2026 into one file, `mi_contribs_1998-2026.csv`, which replaces
+`mi_contribs_clean.csv` and `mi_contribs_clean_2021-2022.csv`. The code is in `state/mi/code/`: `mi_common.R` and
+`mi_contribs.R`.
+
+**Source.** Michigan's campaign finance records moved to the Michigan Transparency Network (MiTN) in 2024; the old
+download site no longer works. The [All-Transactions Reports page](https://mi-boe.entellitrak.com/etk-mi-boe-prod/page.request.do?page=gov.mi.boe.component.cfrexport.page.cfrexportdownload)
+has one zip per transaction type and statement year. The 29 contribution zips (1998-2026) were retrieved November 16,
+2026; each was last regenerated between October 9 and November 15, 2026.
+
+**Reading.** The files are tab-delimited, not quoted, and UTF-8, with the same header in every year; every data row
+ends with one more (empty) field than the header, which is dropped. Blank values are often a single space and are read
+as missing. 24,406,508 rows.
+
+**Statements filed more than once.** No statement type marks an amendment. About 20% of rows are on statements (same
+committee, year and statement type) with more than one document number; rows on the smaller documents rarely repeat
+rows of the largest one, so all rows are kept.
+
+**Columns.** The 32 columns of the earlier files, in the same order, with the source fields renamed to the earlier
+names (`common_name_acronym` to `common_name`; the `contributor_` prefix removed from the name, address, occupation and
+employer fields). `page_no` is no longer in the source and is empty. Four new source columns follow at the end:
+`fundraiser`, `can_political_party`, `can_office_sought`, `can_district_sought`. Values such as `com_type` and
+`contribtype` are as the new system writes them ("Candidate", "Direct Contributions").
+
+**Cleaning.** As above: `na_flag` on `received_date`, `l_name_or_org`, `amount` and `com_legal_name`;
+`dupe_flag` on every column but the document, contribution and detail IDs, within each statement year, all copies
+flagged; `received_year` from `received_date`; addresses, ZIP codes, states and cities normalized. The
+city is swapped with the ZIP code's city when it is an abbreviation of it or one edit away; when the ZIP code has no
+match the normalized city is kept.
+
+**Filings no longer in MiTN.** 613,689 rows of the earlier files belong to filings whose document number is not in
+the MiTN export at all (1998 97,344; 1999 1,659; 2000 32,406; 2001 6,598; 2002 66,731; 2003 8,094; 2004 76,576;
+2005 16,232; 2006 133,382; 2007 12,478; 2008 20,821; 2018 71,750; 2020 56,130; 2022 5,274; 7,268 in other years).
+They are carried over from the previous files as they were published there, including their clean columns
+(`state/mi/code/carry_over.py`); the four new columns are empty for them. Their `cfr_com_id` is padded with leading zeros to the state's 7 digits
+(the earlier files had dropped them), so it matches the IDs in the export. Rows missing from filings that are still in the export are not carried over.
+
+**Result.** 25,020,197 rows (24,406,508 from MiTN and 613,689 carried over), 36 columns, 7.63 GB, UTF-8. `na_flag`
+(7,869 rows) and `dupe_flag` (675,393 rows) are computed on the combined rows; `dupe_flag` compares the source columns
+of the earlier layout. 2026 has 493,952 flagged rows, nearly all inside a few large committee statements that list the
+same contributor, date, amount and aggregate many times under different contribution IDs; they are kept as published.
+Compared with the earlier files (20,197,860 rows for 1998-2022), 24,775 of their rows are not in the new file, mostly
+items no longer in 2020-2022 filings that are still in the export; 2023 to 2026 are new.

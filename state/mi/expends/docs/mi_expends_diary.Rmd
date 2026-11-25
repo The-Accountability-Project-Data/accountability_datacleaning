@@ -924,3 +924,43 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 1997 through 2026 into one file, `mi_expends_1997-2026.csv`, which replaces
+`mi_expends_clean.csv`. The code is in `state/mi/code/`: `mi_common.R` and `mi_expends.R`.
+
+**Source.** Michigan's campaign finance records moved to the Michigan Transparency Network (MiTN) in 2024; the old
+download site no longer works. The [All-Transactions Reports page](https://mi-boe.entellitrak.com/etk-mi-boe-prod/page.request.do?page=gov.mi.boe.component.cfrexport.page.cfrexportdownload)
+has one zip per transaction type and statement year. The 30 expenditure zips (1997-2026) were retrieved November 16,
+2026.
+
+**Reading.** Tab-delimited, not quoted, UTF-8, the same header in every year; every data row ends with one more (empty)
+field than the header, which is dropped. 1,536,638 rows. All rows are kept (statements filed more than once mostly add
+items rather than restate them).
+
+**Columns.** The 41 columns of the earlier file, in the same order, with the source fields renamed to the earlier
+names (`common_name_acronym` to `common_name`, `payee_f_name` to `f_name`, `payee_l_name_or_org` to `lname_or_org`).
+`can_or_ballot` is the source's `candidate`, or `ballot_question` where there is no candidate; `office` is
+`office_district`. `gub_account_type`, `page_no`, `schedule_desc`, `extra_desc`, `debt_payment` and `gotv_ink_ind` are no
+longer in the source and are empty. New columns at the end: the payee address as filed (`payee_address`,
+`payee_city`, `payee_state`, `payee_zip`), `can_political_party`, `can_office_sought`, `can_district_sought`.
+
+**Cleaning.** `na_flag` on `com_legal_name`, `lname_or_org` and `amount`. `date_clean` is the expenditure
+date, blank where the year is before 1995 or the date is after November 16, 2026 (78 rows; 188 have no date);
+`exp_year` from `date_clean`. The payee address is normalized into `address_norm`, `zip_norm`, `state_norm`,
+`city_swap` and `city_refine`; the city is swapped with the ZIP code's city when it is an abbreviation of it or one
+edit away, and otherwise kept; refined cities are kept only where the city, state and ZIP code are a valid
+combination. The vendor address is kept as filed.
+
+**Filings no longer in MiTN.** 19,587 rows of the earlier file belong to filings whose document number is not in
+the MiTN export at all (2008 15,925; 2022 1,297; 2,365 in other years). They are carried over from the previous file as
+they were published there, including `date_clean`, `exp_year` and the normalized address columns
+(`state/mi/code/carry_over.py`); the new columns are empty for them. Their `cfr_com_id` is padded with leading
+zeros to the state's 7 digits (the earlier file had dropped them), so it matches the IDs in the export. Rows missing from filings that are still in the
+export are not carried over.
+
+**Result.** 1,556,225 rows (1,536,638 from MiTN and 19,587 carried over), 48 columns, 541 MB, UTF-8. `na_flag` is
+computed on the combined rows (1,669). Compared with the earlier file (1,026,452 rows, statement years 2008-2022),
+2,490 of its rows are not in the new file, 2,060 of them items no longer in 2022 filings that are still in the export;
+1997-2007 and 2023-2026 are new.

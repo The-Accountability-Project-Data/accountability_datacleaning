@@ -906,3 +906,41 @@ ma %>%
   )
 ```
 
+
+## Update: November 2026
+
+The data was rebuilt for 2002 through November 2026 as `ma_expends_2002-2026.csv`, which replaces
+`ma_expends_clean.csv`. Code: `state/ma/code/` (`reparse.py`, `ma_common.R`, `ma_expends.R`), run from the
+repository root:
+
+```
+python3 state/ma/code/reparse.py state/ma
+Rscript state/ma/code/ma_expends.R
+```
+
+**Source.** The OCPF yearly files `https://ocpf2.blob.core.windows.net/downloads/data2/ocpf-<YEAR>-reports.zip` for
+2002-2026 (there are none for earlier years), retrieved November 15, 2026, unzipped to `state/ma/data/raw/<YEAR>/`.
+The Microsoft Access database used above is no longer published. OCPF's readme: "The records found in the
+accompanying files are from the latest version of reports. Data from reports that have been amended has been
+excluded." There is no separate amendment step.
+
+**Reading.** The files are tab-delimited UTF-8 with a trailing tab; records end in `\r\n`. Text fields are quoted,
+with no quotes inside them; `reparse.py` removes the enclosing quotes and stacks the years into one CSV.
+
+**Record types.** 301-304, 307-312, 314-316, 318-320, 331, 332, 351, 352, 354, 951: the types in the earlier file.
+Type 318 has no name in OCPF's readme (`exp_type` is empty).
+
+**Columns.** A new layout from the yearly files, named like the contributions file: `id`, `rpt_id`, `record_type_id`,
+`date`, `amount`, `last`, `first`, `address`, `city`, `state`, `zip` (the payee), `description` (purpose), `cpf_id` (the
+payee's CPF ID), `clarified_name`, `clarified_purpose`, `is_supported`, `exp_type` (record type name), `payer_any`
+(the report's `OCPF_Full_Name`), `filer_cpf_id`, `comm_name`, `cand_name` (`OCPF_Candidate_First_Name` and `_Last_Name`; blank for committees without a candidate: 85% of rows have one), `office`, `district`, `rpt_type`, `rpt_year` (from the
+report), `payee_any` (first and last name), `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`,
+`state_clean`, `zip_clean`. The committee address and the Access database's other columns are not in the source.
+
+**Cleaning.** `na_flag` on `payee_any`, `payer_any`, `date` and `amount`; `dupe_flag` on every column but `id`; `year`
+from `date`; addresses, ZIP codes, states and cities normalized as in the contributions file.
+
+**Result.** 1,793,799 rows (na_flag 38,764; dupe_flag 31,720), UTF-8. Dates 2002-2026, plus a few dated earlier or
+later as filed. The earlier file had 324,098 rows twice. 19,809 of its rows are not in this file: 13,054 were on
+reports later amended, 5,409 on reports no longer in the files (2,277 dated 2001, a year with no yearly file), and
+1,346 were removed from reports still in the files.

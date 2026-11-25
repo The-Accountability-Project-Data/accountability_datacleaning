@@ -702,3 +702,42 @@ dict_raw <- tibble(
   col.names = c("Column", "Type", "Definition")
 ))
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `ut_expends_2000-2026.csv`, which replaces `ut_expends_clean.csv`.
+That file also held contributions (844,519 rows for 2000-2020, when those years have 247,249 expenditures).
+
+**Source.** The Utah Lieutenant Governor's [financial disclosures](https://disclosures.utah.gov/Search/AdvancedSearch)
+site still offers "Download Data by Year": one file per filer entity type (PCC, CORP, ELECT, INDEXP, LABOR, PAC, PIC,
+PARTY) and report year, with every transaction on that type's reports. On November 20, 2026, all 232 combinations for
+report years 1998-2026 were requested with the link used above (`GenerateReport?ReportYear=&EntityType=`); 125 had
+transactions and 107 returned "There are no recorded transactions" (1998 and 1999 have none). The site's bot filter
+answered with an HTML page when requests shared a session, so each request is sent without cookies, 5 seconds apart.
+
+**Reading.** The export quotes text fields but does not escape quotes inside them, and a few fields hold line breaks.
+`state/ut/code/reparse.py` finds each record by its start (FILED, the filer, the report, a numeric TRAN_ID and the
+transaction type) and rebuilds it from the fixed 18-column layout when a CSV reader does not give 18 fields: 1,168
+records were rebuilt, most of them 2008 PAC addresses wrapped in literal quotes, which are kept. One record could not
+be rebuilt (PAC 2010, TRAN_ID 198188, a $1,000 contribution from "Reynolds" with a garbled address) and is left out.
+The second column of each file, the filer, becomes the entity name; the entity type and report year come from the file
+name. Every column is read as text and an empty field is read as missing; line breaks inside a field become a space.
+Letter case, the "X" flags and everything else are kept as published; the replacement of quotes used above is not.
+The 281 "Balance" and "PCC Balance" rows are beginning balances, not transactions, and are left out. AMENDS holds the
+TRAN_ID of the transaction an amendment replaces; the replaced transactions are not in the download, so every row is
+the current version. FILED is blank on transactions from reports not yet filed. The code is in `state/ut/code/`:
+`reparse.py`, `ut_common.R`, `ut_expends.R`.
+
+**Rows.** Transaction type "Expenditure" only, every filer type and report year.
+
+**Columns.** The 26 columns of the earlier build in its order: `filed`, `entity` (the filer's entity type),
+`committee` (the filer), `report`, `id`, `type`, `date`, `amount`, `inkind`, `loan`, `amends`, `name` (who was
+paid), `purpose`, `address1`, `address2`, `city`, `state`, `zip`, `inkind_comments`, `na_flag`, `dupe_flag`, `year`,
+`address_clean`, `zip_clean`, `state_clean`, `city_clean`. `date` is written as YYYY-MM-DD and `amount` as a number.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `name` and `committee`. `dupe_flag` on every source column but `id`, all
+copies flagged. `year` from `date`. Address, ZIP code, state and city normalized, with the same city swap and refine
+as the contributions.
+
+**Result.** 375,107 expenditures, 2000-01-30 to 2026-11-17, 26 columns, UTF-8. `na_flag` 488 rows; `dupe_flag`
+7,188 rows.

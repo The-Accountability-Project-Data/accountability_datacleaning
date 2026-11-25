@@ -927,3 +927,34 @@ if (!object_exists(s3_path, "publicaccountability")) {
 }
 as_fs_bytes(object_size(s3_path, "publicaccountability"))
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 1999 through 2026 into one file, `ct_contribs_1999-2026.csv`, which replaces
+`ct_contribs_clean.csv` and `ct_contribs_20201006-20220201.csv`. The code is in `state/ct/code/`: `ct_common.R` and
+`ct_contribs.R`.
+
+**Source.** The receipts files on the SEEC [data download page](https://seec.ct.gov/Portal/eCRIS/CurPreYears) were
+downloaded November 17, 2026: the Party/PAC (calendar year) and Candidate/Exploratory (election year) files for 2008
+to 2026 and the CIFS files for 1999 to 2007. The 2022 and 2023 files are offered only as Excel workbooks.
+
+**Reading.** The CSV files are UTF-8 or windows-1252, and some windows-1252 files also hold UTF-8 lines, so each line
+is decoded on its own. Dates in the Excel files are written as m/d/yyyy, as in the CSV files. The 2006 CIFS file has
+no header line and takes the other CIFS files' columns. All columns are read as text, with whitespace squished.
+
+**Amendments.** An amended report is filed as a separate report for the same committee and period and rarely repeats
+the rows of the earlier report, so all rows are kept.
+
+**Columns.** The 64 columns of the earlier files, in the same order, renamed from the source headers as before.
+`source_type` is CAND for the candidate files, PAC for the party and PAC files and OLD for the CIFS files. "NO" values
+are kept as published.
+
+**Cleaning.** `date_clean` from `date`; `year_clean` from `date_clean`, missing outside 1998-2026. `na_flag` on
+`contributor`, `date_clean`, `amount` and `committee`; `dupe_flag` on every source column, all copies flagged.
+Addresses, ZIP codes, states and cities normalized; the city is swapped with the ZIP code's city when it is an
+abbreviation of it or one edit away, then refined where the refined city, state and ZIP code are a valid combination.
+
+**Result.** 2,000,713 rows (CAND 1,094,323; PAC 750,705; OLD 155,685), 64 columns, 943 MB, UTF-8. `na_flag` 85,579
+rows, mostly undated (20,147 dates are filed as text such as "Various"); `dupe_flag` 15,060 rows. Compared with the
+earlier files, 5,475 of their 1,535,369 distinct committee, contributor, date and amount combinations are not in the
+new file, most from the 2008 candidate file, which the SEEC reissued in March 2024; 2023 to 2026 are new.

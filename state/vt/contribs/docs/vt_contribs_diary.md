@@ -805,3 +805,58 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `vt_contribs_2014-2026.csv`, which replaces `vt_contribs_clean.csv` (`vt_contribs_20131025-20210924.csv`) and `vt_contribs_20241116.csv`.
+
+**Source.** Vermont replaced the Campaign Finance System used above. The Secretary of State's new
+[Campaign Finance System](https://campaignfinance.vermont.gov/) has a public
+[Download Data](https://campaignfinance.vermont.gov/public/cf/downloads) page with one CSV per filing year for
+"Contributions and Loans" and for "Expenditures". On November 21, 2026 it offered filing years 2014 to 2025
+("extracted as of 11/17/2026 02:59 PM"); all were downloaded. Filing year 2026 was not offered yet, so its
+transactions were taken from the site's public search, which returns at most 10,000 records per query, by
+transaction-date window.
+
+**Reading.** `state/vt/code/reparse.py` joins the files of each kind. Every line of the download ends with a carriage
+return and line feed, also inside fields, so a record starts at a line that begins with a numeric filing entity ID,
+three more fields and a numeric transaction ID; any other line continues the record before it, joined with a space.
+Records with stray quotes are regrouped into the header's fields. No record is left out. The search records are put
+in the download's columns; the search does not give the committee name, goods or service donated, other purpose
+comments, the amended flag or the two filed dates, which are empty for them. Every column is read as text and an
+empty field is read as missing. Letter case and everything else are kept as published. Header names are written in
+snake case, and `filing_year` and `source` ("bulk" or "search") are added. Amounts such as "$1,283.55" become numbers
+and dates are written as YYYY-MM-DD.
+
+**Repeated transactions.** The download repeats a transaction once for each version of the contributor's or payee's
+contact record: the copies share the transaction ID, the report and every other column, and differ only in the name
+or address. The order of the copies carries no meaning and nothing in the file says which version is current. One
+copy is kept per transaction ID: a copy with a name rather than "Under Threshold - Name Withheld"; then the copy
+whose street, city and ZIP code equal the same name's address on their latest transaction that is not repeated;
+failing that, the first copy in the file. The last choice is arbitrary.
+For contributions: 19,627 transaction IDs were on 45,762 rows. 12,693 were identical copies; of the 6,934 that
+differed, the named copy was kept for 1,585, the latest-address copy for 1,313 and the first copy (arbitrary) for
+4,351. 26,135 rows were left out.
+
+**Rows.** Every contribution, in-kind contribution and loan received in the files and the search: 421,491 rows from
+the download and 75,822 from the search. Left out after the repeats: 351,387 contributions whose contributor is
+"Under Threshold - Name Withheld" (contributions of $100 or less, listed without the donor) and 232 with no
+contributor name.
+
+**Columns.** `filing_entity_id`, `filing_entity_name`, `committee_name`, `registration_type`, `transaction_id`,
+`transaction_type`, `transaction_subtype`, `goods_or_service_donated`, `contributor_type`, `contributor_last_name`,
+`contributor_first_name`, `contributor_address1`, `contributor_address2`, `contributor_city`, `contributor_state`,
+`contributor_zip`, `transaction_date`, `amount`, `election_type`, `election_year`, `transaction_comments`, `amended`,
+`timed_report_name`, `timed_report_filed_date`, `report_name`, `report_filed_date`, `filing_year`, `source`,
+`contributor_name` ("LAST, FIRST", or the last-name field alone when the first-name field is empty or repeats it, as
+for organizations), `recipient_name` (the committee name, or the filing entity name when there is none), `na_flag`,
+`dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** `na_flag` on `transaction_date`, `amount`, `contributor_name` and `recipient_name`. `dupe_flag` on every
+column but `transaction_id`, all copies flagged. `year` from `transaction_date`. Address, ZIP code, state and city
+normalized; the city is swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then
+refined where the refined city, state and ZIP code are a valid combination. The code is in `state/vt/code/`:
+`reparse.py`, `vt_common.R`, `vt_contribs.R`.
+
+**Result.** 119,559 contributions, 2001-07-14 to 2026-11-14, 37 columns, UTF-8. `na_flag` 0 rows; `dupe_flag` 2,352
+rows.

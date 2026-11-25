@@ -746,3 +746,36 @@ dict_raw <- tibble(
   col.names = c("Column", "Type", "Definition")
 ))
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `ia_contribs_2003-2026.csv`, which replaces `ia_contribs_clean.csv`.
+
+**Source.** The Iowa Ethics and Campaign Disclosure Board's datasets moved from the Socrata portal used above (whose
+dataset pages now return "not found") to the Iowa Data Hub: dataset 917, "Iowa Campaign Contributions Received", and
+918, "Iowa Campaign Expenditures", both updated November 21, 2026. Each was downloaded on November 22, 2026 from
+`https://idh-be.iowa.gov/api/v1/datasets/<id>/rows.csv`, which returns a zip (917 holds four CSV parts). Every year has at least as
+many records as the earlier build, so the new file replaces it. The Board's data may not be used for commercial
+purposes (Iowa Code section 68B.32A(7)).
+
+**Reading.** Every column is read as text and an empty field is read as missing. Letter case and everything else are
+kept as published. Dates are already YYYY-MM-DD; amounts become numbers. Rows with no date and no committee are left
+out: they are pieces of records split in the source, with their values in the wrong columns.
+
+**Rows.** Contributions (CON), in-kind contributions (INK) and loans received (LOANREC): 3,453,656 rows read. Left
+out: 20 pieces of split records and 33,216 contributions with no contributor name (about half of them with a street
+address), as for New Hampshire and Vermont.
+
+**Columns.** The source's: `date` (contribution_received_date), `committee_cd`, `committee_type`, `committee_nm`,
+`transaction_type`, `first_nm`, `last_nm`, `address_line_1`, `address_line_2`, `city`, `state`, `zip_code`,
+`amount`, `check_number`, `contr_committee_cd` (a contributing committee's code), `organization_nm` (a contributing
+organization); then `contributor_name` (the organization, or "LAST, FIRST"), `na_flag`, `dupe_flag`, `year`,
+`address_clean`, `city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `contributor_name` and `committee_nm`. `dupe_flag` on every column, all
+copies flagged. `year` from `date`. Address, ZIP code, state and city normalized; the city is swapped with the ZIP
+code's city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP
+code are a valid combination. The code is in `state/ia/code/`: `ia_common.R`, `ia_contribs.R`.
+
+**Result.** 3,420,420 contributions, 1930-10-01 to 2026-11-05, 24 columns, UTF-8. `na_flag` 20 rows (no amount);
+`dupe_flag` 64,725 rows.

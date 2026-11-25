@@ -868,3 +868,45 @@ guess_encoding(clean_path)
 | `rec_state_clean` | `<chr>`  | Normalized recipient 2-digit state abbreviation   |
 | `rec_city_clean`  | `<chr>`  | Normalized recipient city name                    |
 | `con_city_clean`  | `<chr>`  | Normalized contributor city name                  |
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into two files, `nc_contribs_1989-2022.csv` and
+`nc_contribs_2023-2026.csv`, which replace `nc_contribs_clean.csv` and `nc_contribs_clean20200721-20221015.csv`.
+
+**Source.** The North Carolina State Board of Elections [Advanced Transaction
+Search](https://cf.ncsbe.gov/CFTxnLkup/AdvancedSearch/) was rebuilt after the 2022 update, and the export used
+above (`/CFTxnLkup/ExportResults/?Params=`) no longer exists. Its "Export to .CSV" button now posts the search to
+`/CFTxnLkup/Export`. On November 20, 2026, every transaction was downloaded in transaction-date windows: years before
+1990 together, then years, quarters or months, and the dates before 1900 and after 2026 (typos) on their own. Receipts and
+expenditures were fetched separately. Their transaction type names overlap (Debt Payment, Refund/Reimbursement,
+Building Fund), and the 2022 update asked for both at once, so its files mixed the two. Each window's row count
+matched the site's count for that period. The site holds transactions back to 1989.
+
+**Reading.** The export is UTF-8 with 24 columns. It does not quote line breaks inside a field, so 8 expenditure
+records whose Purpose holds one came out split over two lines; `state/nc/code/reparse.py` rejoins them and stacks the
+windows into one file per type. Every column is read as text and an empty field is read as missing. Line breaks
+inside a field become a space. Letter case, the "Not Available" and "---" placeholders, and everything else are kept
+as published; the earlier builds uppercased every field. The code is in `state/nc/code/`: `reparse.py`,
+`nc_common.R`, `nc_contribs.R`.
+
+**Unitemized contributions are left out.** North Carolina committees need not report the name, address or
+occupation of an individual who gives $50 or less in an election (G.S. 163-278.11). They report that money as rows
+named "Aggregated Individual Contribution", with no donor and almost never an address. There were 6,495,015 such
+rows, 47.7% of all receipts, totalling $129,080,903 (about 4% of the dollars); some payroll-deduction committees file
+one row per deduction. Rows whose contributor name is "Aggregated Individual Contribution" or a hand-typed variant
+("AGGREGATE CONTRIBUTION", "Aggregated Individual Contributions", any case) are dropped.
+
+**Columns.** The 34 columns of the earlier builds in their order (`con_name` ... `declaration`, `na_flag`,
+`dupe_flag`, `year`, then the clean address, ZIP, state and city columns), then `account_code`, which the earlier
+builds dropped: 35 columns. `con_*` is the contributor, `rec_*` the receiving committee (`rec_id` is its SBoE ID).
+`date` is written as YYYY-MM-DD and `amount` as a number.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `con_name` and `rec_name`. `dupe_flag` on every source column, all
+copies flagged. `year` from `date`. Addresses, ZIP codes, states and cities normalized for both parties; the city is
+swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the refined
+city, state and ZIP code are a valid combination.
+
+**Result.** 7,124,433 receipts, 35 columns, UTF-8: `nc_contribs_1989-2022.csv` 5,516,227 rows, including the 21
+rows dated before 1900; `nc_contribs_2023-2026.csv` 1,608,206 rows, including the 249 rows dated after 2026. Dates
+are as published. `na_flag` 6,244 rows; `dupe_flag` 211,006 rows.

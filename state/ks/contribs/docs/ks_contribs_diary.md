@@ -801,3 +801,35 @@ The following table describes the variables in our final exported file:
 | `address_clean`       | `character` |            |
 | `city_clean`          | `character` |            |
 | `zip_clean`           | `character` |            |
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `ks_contribs_2009-2026.csv`, which replaces
+`ks_contribs_20080109-20211231.csv`.
+
+**Source.** The Kansas Secretary of State's [campaign finance viewer](https://kssos.org/elections/cfr_viewer/cfr_examiner_contribution.aspx),
+the same search used above, covers contributions to statewide candidates. PACs and parties report to the Kansas
+Governmental Ethics Commission and are not in it. On November 20, 2026, the search was run for 1900-2004 together and
+then for each calendar year from 2005 to 2026, and each result was exported ("CLICK HERE TO EXPORT THE RESULTS", an HTML
+table saved as `.xls`). Every export had as many rows as the search's "N record(s) found".
+
+**Reading.** `state/ks/code/reparse.py` takes each value from its labeled field in the export (candidate, contributor,
+address, address 2, city, state, ZIP code, occupation, industry, date, tender type, amount, in-kind amount, in-kind
+description, period start and end). Every column is read as text and an empty field is read as missing; line breaks
+inside a field become a space. Letter case and everything else are kept as published. Amounts such as "$1,283.55"
+become numbers and dates are written as YYYY-MM-DD. The code is in `state/ks/code/`: `reparse.py`, `ks_common.R`,
+`ks_contribs.R`.
+
+**Columns.** The 21 columns of the earlier build in its order, then `na_flag` and `state_clean`: `cand_name`,
+`contributor`, `address`, `address2`, `city`, `state`, `zip`, `occupation`, `industry`, `date`, `typeof_tender`,
+`amount`, `in_kind_amount`, `in_kind_description`, `start_date`, `end_date`, `dupe_flag`, `year`, `address_clean`,
+`city_clean`, `zip_clean`, `na_flag`, `state_clean`.
+
+**Cleaning.** `na_flag` on `date`, `contributor` and `cand_name`, and on rows with neither `amount` nor
+`in_kind_amount` (in-kind contributions have only `in_kind_amount`). `dupe_flag` on every source column, all copies
+flagged. `year` from `date`. Address, ZIP code, state and city normalized; the city is swapped with the ZIP code's
+city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code are a
+valid combination.
+
+**Result.** 245,366 contributions, 2000-10-30 to 2026-10-28 (three before 2009), 23 columns, UTF-8. `na_flag` 0
+rows; `dupe_flag` 4,363 rows.

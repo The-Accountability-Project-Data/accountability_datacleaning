@@ -842,3 +842,45 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `ut_contribs_2000-2026.csv`, which replaces
+`ut_contribs_2000-20210827.csv`, `ut_contribs_2000-2023.csv` and `ut_contribs_clean.csv`. Two of those overlapped,
+so contributions from 2000 to 2021 were in the dataset twice.
+
+**Source.** The Utah Lieutenant Governor's [financial disclosures](https://disclosures.utah.gov/Search/AdvancedSearch)
+site still offers "Download Data by Year": one file per filer entity type (PCC, CORP, ELECT, INDEXP, LABOR, PAC, PIC,
+PARTY) and report year, with every transaction on that type's reports. On November 20, 2026, all 232 combinations for
+report years 1998-2026 were requested with the link used above (`GenerateReport?ReportYear=&EntityType=`); 125 had
+transactions and 107 returned "There are no recorded transactions" (1998 and 1999 have none). The site's bot filter
+answered with an HTML page when requests shared a session, so each request is sent without cookies, 5 seconds apart.
+
+**Reading.** The export quotes text fields but does not escape quotes inside them, and a few fields hold line breaks.
+`state/ut/code/reparse.py` finds each record by its start (FILED, the filer, the report, a numeric TRAN_ID and the
+transaction type) and rebuilds it from the fixed 18-column layout when a CSV reader does not give 18 fields: 1,168
+records were rebuilt, most of them 2008 PAC addresses wrapped in literal quotes, which are kept. One record could not
+be rebuilt (PAC 2010, TRAN_ID 198188, a $1,000 contribution from "Reynolds" with a garbled address) and is left out.
+The second column of each file, the filer, becomes the entity name; the entity type and report year come from the file
+name. Every column is read as text and an empty field is read as missing; line breaks inside a field become a space.
+Letter case, the "X" flags and everything else are kept as published; the replacement of quotes used above is not.
+The 281 "Balance" and "PCC Balance" rows are beginning balances, not transactions, and are left out. AMENDS holds the
+TRAN_ID of the transaction an amendment replaces; the replaced transactions are not in the download, so every row is
+the current version. FILED is blank on transactions from reports not yet filed. The code is in `state/ut/code/`:
+`reparse.py`, `ut_common.R`, `ut_contribs.R`.
+
+**Rows.** Transaction type "Contribution", every filer type and report year. 296 contributions (243 of them in 2000) are filed under the candidate "doe, john", a placeholder name in the source; they are kept as published.
+
+**Columns.** The 27 columns of the earlier build in its order: `filed`, `entity_name` (the filer), `report`,
+`tran_id`, `tran_type`, `tran_date`, `tran_amt`, `inkind`, `loan`, `amends`, `name` (the contributor), `purpose`,
+`address1`, `address2`, `city`, `state`, `zip`, `inkind_comments`, `entity_type`, `report_year`, `na_flag`,
+`dupe_flag`, `tran_year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`. `tran_date` is written as
+YYYY-MM-DD and `tran_amt` as a number.
+
+**Cleaning.** `na_flag` on `tran_date`, `tran_amt`, `name` and `entity_name`. `dupe_flag` on every source column but
+`tran_id`, all copies flagged. `tran_year` from `tran_date`. Address, ZIP code, state and city normalized; the city is
+swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the refined
+city, state and ZIP code are a valid combination.
+
+**Result.** 957,295 contributions, 2000-01-18 to 2026-11-20, 27 columns, UTF-8. `na_flag` 96 rows; `dupe_flag`
+36,478 rows.

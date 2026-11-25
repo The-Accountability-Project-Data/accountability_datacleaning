@@ -1125,3 +1125,27 @@ dict_raw <- tibble(
   col.names = c("Column", "Type", "Definition")
 ))
 ```
+
+## Update: November 2026
+
+_Rebuilt 2026-11-15. Replaces `va_contribs_clean.csv` and `va_contribs_clean_202011-202302.csv`. Output:
+`va_contribs_2012-2026.csv`, 4,507,303 rows. Code: [`state/va/code/`](../../code/) (`reparse.py`, `va_common.R`,
+`va_contribs.R`)._
+
+- **Source:** every monthly folder of the [ELECT bulk files][elect_csv], `2012_03` (the first monthly folder) to
+  `2026_11`, downloaded 2026-11-14 and 15. The state regenerates every month's files daily, so all months were
+  downloaded again. Each report is in the folder of the month it was submitted.
+- **Rows:** Schedule A (direct contributions) and Schedule B (in-kind contributions), joined to `Report.csv` on the
+  report ID.
+- **Amended reports:** an amendment restates the whole report, and all versions of a report share `ReportUID`. Only the
+  current version of each report is kept (highest `AmendmentCount`). Rows on the 38,738 superseded report versions are
+  dropped: 1,177,060 Schedule A and 38,583 Schedule B rows.
+- **Reading:** every field is quoted, and quotes inside a field are not escaped, so records are split on `"\r\n"` and
+  fields on `","`. Quotes inside a field are kept as published. The files are ASCII or Windows-1252 and are read as
+  Windows-1252. Output is UTF-8.
+- **Columns:** the same 67 columns, in the same order, as `va_contribs_clean_202011-202302.csv`. `con_id` is the
+  Schedule A or B ID; the two are separate sequences.
+- **Cities:** when the ZIP code has no match, `con_city_clean` and `fil_city_clean` keep the normalized city.
+- Rows identical in every column but `con_id` are flagged in `dupe_flag` (37,889) and kept.
+
+[elect_csv]: https://apps.elections.virginia.gov/SBE_CSV/CF/

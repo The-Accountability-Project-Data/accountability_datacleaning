@@ -916,3 +916,31 @@ The following table describes the variables in our final exported file:
 | `address_clean`      | `character` |            |
 | `city_clean`         | `character` |            |
 | `zip_clean`          | `character` |            |
+
+## Update: November 2026
+
+The data was rebuilt for 2014 through 2026 into one file, `ok_expends_2014-2026.csv`, which replaces
+`ok_expends_20140127-20220218.csv`. The code is in `state/ok/code/`: `ok_common.R` and `ok_build.R` (run with
+`expends`).
+
+**Source.** The Oklahoma Ethics Commission's Guardian filing system, [Data Download page](https://guardian.ok.gov/PublicSite/DataDownload.aspx):
+the yearly `<year>_ExpenditureExtract.csv.zip` files for 2014 to 2026, extracted as of November 14, 2026 and downloaded
+November 17, 2026.
+
+**Reading.** As for the contributions: records split at a quote, line break and quote, fields at quote, comma, quote;
+every record has 23 fields; values as published; windows-1252 except 2014. 325,856 rows.
+
+**Amendments.** `amended` marks records for which an amendment was filed. Each expenditure ID appears once, so all
+rows are kept. 3,197 rows have no expenditure ID or org ID (independent expenditures, electioneering and state
+question communications); they are kept.
+
+**Columns.** The 29 columns of the earlier file: the source headers in snake case, then `na_flag`, `dupe_flag`,
+`expenditure_year`, `address_clean`, `city_clean`, `zip_clean`. Dates are written as YYYY-MM-DD and
+`expenditure_amount` as a number.
+
+**Cleaning.** `na_flag` on `expenditure_date`, `last_name` and `expenditure_amount`, and on rows with neither a
+committee nor a candidate name. `dupe_flag` on every column but `expenditure_id`, all copies flagged.
+`expenditure_year` from `expenditure_date`. Addresses, ZIP codes and cities normalized as for the contributions.
+
+**Result.** 325,856 rows, 29 columns, 79 MB, UTF-8. `na_flag` 189 rows; `dupe_flag` 9,047. Every expenditure ID of the
+earlier file is in the new file; 2021 to 2026 are new or complete.

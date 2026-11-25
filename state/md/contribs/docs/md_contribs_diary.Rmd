@@ -971,3 +971,52 @@ dict_raw <- tibble(
 ```
 
 
+
+## Update: November 2026
+
+The data was rebuilt into `md_contribs_2002-2026.csv`, which replaces `md_contribs_clean.csv` and `md_contribs_clean_20201118-20230118.csv`.
+
+**Source.** The Maryland State Board of Elections replaced the Campaign Reporting Information System search used
+above with a new system at <https://campaignfinance.maryland.gov/>, whose "Download Data" page offers one CSV per
+filing year. Filing years 2021 to 2026 were downloaded on November 22, 2026; filing years 2019 and 2020
+come back empty, and the new system's data begins with transactions in 2020. Comparing month by month with the
+earlier builds, the new contributions are complete from January 2020 and the new expenditures from December 2020.
+Rows of the earlier builds dated before then are kept, as published then and with their clean address columns; their
+name and address are one field each. A new row dated before then that matches an earlier row (same date and amount,
+and the same contributor, payee or vendor, or the same committee, ignoring letter case and punctuation) is left out,
+since the earlier row is kept; the others are kept. The column `source` says "earlier" or "2026".
+
+**Reading.** `state/md/code/reparse.py` joins the files of each kind. The first line of each file is a title. A
+record starts at a line that begins with a numeric filing entity ID; other lines continue the record before it (line
+breaks inside fields), joined with a space. Records that are not valid UTF-8 are read as Windows-1252. The export
+writes a curly apostrophe (as in O'Connor) 16 times as the bytes ",Äô", whose comma adds a field; these become the
+apostrophe again. Values written as Excel formulas, such as `="21401"`, are unwrapped. Records with stray quotes are
+regrouped into the header's fields. Every column is read as text and an empty field is read as missing. Letter case
+and everything else are kept as published. Amounts become numbers and dates are written as YYYY-MM-DD.
+
+**Rows.** New: every contribution, loan and return in the "Contributions & Loans" files, 3,617,816 rows; one record
+is left out (its city field is garbled beyond splitting). Of the 5,183 new contributions dated before 2020, 15 match
+an earlier row and are left out; the rest are kept (mostly "48Hours Report" filings the earlier build did not have).
+Earlier: 5,407,590 contributions dated before 2020 (and 32 undated). Contributions with no contributor name are left
+out (5,467 new, 9,883 earlier), as for New Hampshire, Vermont and Iowa.
+
+**Columns.** The new files' columns in snake case: `filing_entity_id`, `committee_name`,
+`abbreviated_committee_name`, `committee_type`, `contributor_type`, `contributor_company_name`,
+`contributor_last_name`, `contributor_first_name`, `contributor_middle_name`, `contributor_address1`,
+`contributor_address2`, `contributor_city`, `contributor_state`, `contributor_zip`, `contributor_county`,
+`transaction_type`, `date`, `amount`, `payment_type`, `fund_type`, `number_of_people`, `price_per_person`,
+`coordinated_in_kind`, `public_funding_requested`, `amount_eligible_for_public_funding`, `description`,
+`report_name`, `aggregate`, `filing_year`, `contributor_name` (the company, or "LAST, FIRST MIDDLE"); the earlier
+build's `earlier_employer`, `earlier_occupation` and `earlier_office` (the new files have no employer or occupation);
+`source`, `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`. For earlier
+rows, `committee_name`, `contributor_name`, `contributor_address1`, `contributor_type`, `payment_type`, `fund_type`
+and `report_name` hold the earlier build's committee, name, address, type, method, fund and period.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `contributor_name` and `committee_name`. New rows: `dupe_flag` on every
+column, all copies flagged; address, ZIP code, state and city normalized, the city swapped with the ZIP code's city
+when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code are a
+valid combination. Earlier rows keep their `dupe_flag` and clean columns. The code is in `state/md/code/`:
+`reparse.py`, `md_common.R`, `md_contribs.R`.
+
+**Result.** 9,010,073 contributions (3,612,334 new, 5,397,739 earlier), 41 columns, UTF-8. `na_flag` 30 rows;
+`dupe_flag` 565,105 rows.

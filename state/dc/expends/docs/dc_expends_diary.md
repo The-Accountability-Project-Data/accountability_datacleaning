@@ -468,3 +468,37 @@ aws_head <- head_object(aws_key, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `dc_expends_2003-2026.csv`, which replaces
+`dc_expends_20030101-20211230.csv` and `dc_expends_20030101-20230504.csv`.
+
+**Source.** The data comes from the DC Office of Campaign Finance [Contribution and Expenditure
+Search](https://efiling.ocf.dc.gov/ContributionExpenditure), all filer types, through its Excel export. On November
+20, 2026, every expenditure was downloaded in calendar-year windows, 2003 through 2026; the windows before 2003 and after
+2026 were empty. The search's CSV export is not used: it is UTF-16 and leaves out Payee Organization Name. DC's open data
+layers ("Campaign Financial Contributions" and "Campaign Financial Expenditures") are not used either: their amounts
+are whole dollars and the expenditures have no committee. Their totals were a check: 126,120 rows here, 126,043 in the open data of November 16, 2026.
+
+**Reading.** `state/dc/code/reparse.py` turns the workbooks into one CSV, placing each value by its cell reference
+(the workbooks leave empty cells out). Every column is read as text and an empty field is read as missing; line
+breaks inside a field become a space. Letter case and everything else are kept as published. Amounts such as
+"$1,234.50" become numbers, and dates are written as YYYY-MM-DD. The code is in `state/dc/code/`: `reparse.py`,
+`dc_common.R`, `dc_expends.R`.
+
+**Rows.** Every expenditure, as published, including about 1,400 $0.00 rows with no payee that come from committees'
+empty reports (mostly 2022 and 2024).
+
+**Columns.** The earlier build's 21 columns in its order: `expendee_name` (the paying committee, "Committee Name"),
+`payee_first_name`, `payee_middle_name`, `payee_last_name`, `payee_organization_name`, `number_and_street`, `city`,
+`state`, `zip`, `purpose_of_expenditure`, `further_explanation`, `payment_date`, `amount`, `payee_name` (first,
+middle and last name, or the organization name when there is no person's name), `na_flag`, `dupe_flag`,
+`payment_year`, `address_clean`, `city_clean`, `state_clean`, `zip_clean`.
+
+**Cleaning.** `na_flag` on `payment_date`, `amount`, `payee_name` and `expendee_name`. `dupe_flag` on every source
+column, all copies flagged. `payment_year` from `payment_date`. Address, ZIP code, state and city normalized, with
+the same city swap and refine as the contributions.
+
+**Result.** 126,120 expenditures, 2003-01-01 to 2026-11-02, 21 columns, UTF-8. `na_flag` 2,282 rows; `dupe_flag`
+4,580 rows.

@@ -698,3 +698,56 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data was rebuilt for the whole history from Sunshine into two files, `wi_expends_2008-2022.csv` and
+`wi_expends_2023-2026.csv`, which replace `wi_expends_clean.csv`. The code is in `state/wi/code/`: `wi_common.R` and
+`wi_expends.R`.
+
+**Source.** Wisconsin's campaign finance system is now [Sunshine](https://campaignfinance.wi.gov/), run by the Wisconsin
+Ethics Commission. It replaced CFIS, the site this diary first scraped, and holds the history migrated from CFIS.
+Browse Data > Transactions lists contributions and disbursements together, and "Download Results > Download as CSV"
+exports up to 99,999 rows at a time. On November 18, 2026, every transaction was downloaded in transaction-date
+windows of at most 90,000 rows, newest first: calendar months, consecutive months merged and busy months split into
+day ranges, then everything dated after the download day and everything dated before 2000.There were 254 windows, and
+each file's row count matched the site's count for its window. The windows add up to 13,591,937 transactions, the
+site's total. The largest single days are December 31 (98,896 rows on 2025-12-31).
+
+**Reading.** The files are UTF-8 with 61 columns. Every column is read as text and an empty field is read as missing.
+Line breaks inside a field become a space, except in `reports`, where each report is on its own line and the reports
+are joined with "; ". Column names are the source headers in snake case; "Contributor Entity ID (-> Related Payer
+Entity ID if applicable)" and "Contributor Name (-> Related Payer Name if applicable)" become `contributor_entity_id`
+and `contributor_name`. Every transaction has a unique `id`.
+
+**Amendments.** Sunshine gives each transaction as it now stands, under one ID, so there are no superseded rows.
+
+**Columns.** The 61 source columns, then `na_flag`, `dupe_flag`, `year`, and `address_clean`, `city_clean`,
+`state_clean` and `zip_clean` for the contributor and for the payee: 72 columns. `date` is written as YYYY-MM-DD and
+`amount` as a number. Everything else is as published, including the "MISSING" placeholders in some migrated address
+fields and the committee's current ballot event on migrated rows. `registrant_id` is the CFIS committee ID (`ethcfid`)
+padded to seven digits.
+
+**Compared with the CFIS file.** The CFIS layout had columns for filing fee, recount, recall and referendum names,
+and 72-hour report and segregated fund columns; Sunshine's download has none of these. `reports` names the report or
+reports each transaction is on; it is empty on many migrated rows. New in this layout: entity IDs and types for the
+payer and the payee, the paying registrant's address, registrant type and party, related entity, final recipient,
+office, district, branch and ballot event.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `contributor_name` and `payee_name`. `dupe_flag` on every column but
+`id`, all copies flagged. `year` from `date`. Addresses, ZIP codes, states and cities normalized for both parties; the
+city is swapped with the ZIP code's city when it is an abbreviation of it or one edit away, then refined where the
+refined city, state and ZIP code are a valid combination.
+
+**Rows.** Transaction type "Disbursement" (890,018 rows): `contributor_name` is the paying registrant and
+`payee_name` who was paid. `final_recipient` is filled for in-kind and pass-through payments, `related_entity` for
+independent expenditures. `transaction_category` replaces the old `expense_category`, `transaction_purpose` the old
+`expense_purpose` and `support_stance` the old `support_oppose`; filing fees, recounts, recalls and referendums are
+categories rather than columns.
+
+**Result.** 890,018 rows, 72 columns, UTF-8: `wi_expends_2008-2022.csv` 657,494 rows (377 MB), with the 144 rows
+dated 1950 to 2007; `wi_expends_2023-2026.csv` 232,524 rows (129 MB), through 2026-11-16. `na_flag` 7 rows;
+`dupe_flag` 49,711 rows.
+
+**Upload.** On November 18, 2026, both files were uploaded to `csv/` in the `publicaccountability` S3 bucket;
+each decodes as UTF-8 there.

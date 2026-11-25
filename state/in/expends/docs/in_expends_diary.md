@@ -934,3 +934,33 @@ ind %>%
     na = ""
   )
 ```
+
+## Update: November 2026
+
+The data was rebuilt for 1998 through 2026 into one file, `in_expends_1998-2026.csv`, which replaces
+`in_expends_clean.csv`. The code is in `state/in/code/`: `reparse.py`, `in_common.R` and `in_expends.R`.
+
+**Source.** The yearly expenditure files for 2000 through 2026 from the
+[download page](https://campaignfinance.in.gov/PublicSite/Reporting/DataDownload.aspx),
+`https://campaignfinance.in.gov/PublicSite/Docs/BulkDataDownloads/<YEAR>_ExpenditureData.csv.zip`, from the extract of
+November 13, 2026, retrieved November 15, 2026. The state no longer publishes 1998 and 1999, so the 10,589 rows of the
+earlier file dated 1998-1999 are included as they were published.
+
+**Reading.** Every field is quoted and quotes inside a field are not escaped; some fields contain line breaks. Each
+file is split on the record end (`"\r\n"`) and the field separator (`","`), which gives the header's 18 fields for
+every record, so no rows are filtered out. Quotes inside fields are kept as published (1,727 rows). Files that are not
+valid UTF-8 (19 of 27) are read as windows-1252. 852,284 rows.
+
+**Amended.** All rows are kept, including the 13,367 with `Amended` = 1. The files have no report or transaction ID,
+so an amended item cannot be linked to the item it replaced; `amended` is kept as a flag.
+
+**Columns.** The 27 columns of the earlier file, in the same order. As above: `na_flag` on `committee`, `name`,
+`expenditure_date` and `amount` (20,629 rows); `dupe_flag` on the second and later copies of identical rows (9,485);
+`date_flag` for dates before 1998 or after the build date (none), `date_clean` and `year_clean`; addresses, ZIP codes,
+states and cities normalized. The city is swapped with the ZIP code's city when it is an abbreviation of it or within
+two edits, and refined where the refined city, state and ZIP code are valid; when the ZIP code has no match the
+normalized city is kept.
+
+**Result.** 862,873 rows, 221 MB, UTF-8. Compared with the earlier file: 2000-2018 counts are within a few percent;
+2019-2026 are new. 2,408 rows of the earlier file are not in the new file, 1,942 of them with a blank or out-of-range
+date (the new files have none).

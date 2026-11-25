@@ -933,3 +933,23 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data is now two files: `fl_contribs_1995-2022.csv` and `fl_contribs_2023-2026.csv`, which replace
+`fl_contribs_clean.csv`.
+
+**Earlier part.** `fl_contribs_1995-2022.csv` holds every row of `fl_contribs_clean.csv` (25,516,906 rows; none dated
+2023 or later), unchanged except that it is re-encoded as UTF-8 (the earlier file mixed Windows-1252 and UTF-8;
+6,636 lines were read as Windows-1252).
+
+**Source.** The Division of Elections Campaign Finance Database contribution query
+(<https://dos.elections.myflorida.com/campaign-finance/contributions/>), all candidates and committees, results as a
+tab-delimited text file. Queried by quarter from January 2023 to December 2026, plus one query from January 2027 with
+no end date (75 rows with mistyped dates), on November 17, 2026. The files are tab-separated, unquoted, Windows-1252.
+
+**Build.** `state/fl/code/fl_build.R` reads the files as text and writes the earlier build's 16 columns, with the
+city, state and ZIP code split and the address normalized as above. `na_flag` and `dupe_flag` as above.
+
+**Result.** `fl_contribs_2023-2026.csv`: 2,905,152 rows, UTF-8. `na_flag` 11 rows; `dupe_flag` 219,541 rows.
+Contributions dated 2022 or earlier that were filed or amended after April 2023 are in neither file.

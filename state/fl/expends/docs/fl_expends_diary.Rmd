@@ -886,3 +886,23 @@ aws_head <- head_object(aws_path, "publicaccountability")
 (aws_size <- as_fs_bytes(attr(aws_head, "content-length")))
 unname(aws_size == clean_size)
 ```
+
+## Update: November 2026
+
+The data is now two files: `fl_expends_1995-2022.csv` and `fl_expends_2023-2026.csv`, which replace
+`fl_expends_1995-2020.csv` and `fl_expends_20030101-20230510.csv`.
+
+**Earlier part.** `fl_expends_1995-2022.csv` joins the rows of `fl_expends_1995-2020.csv` dated before 2008 or undated
+(821,357) and the rows of `fl_expends_20030101-20230510.csv` dated 2008 through 2022 (1,239,401): 2,060,758 rows,
+unchanged except that they are re-encoded as UTF-8.
+
+**Source.** The Division of Elections Campaign Finance Database expenditure query
+(<https://dos.elections.myflorida.com/campaign-finance/expenditures/>), all candidates and committees, results as a
+tab-delimited text file. The query answers "Invalid Date Range Entered" to any end date, so one query from January 1,
+2023 with no end date was made on November 17, 2026. The file is tab-separated, unquoted, Windows-1252.
+
+**Build.** `state/fl/code/fl_build.R` reads the file as text and writes the earlier build's 15 columns, with the
+city, state and ZIP code split and the address normalized as above. `na_flag` and `dupe_flag` as above.
+
+**Result.** `fl_expends_2023-2026.csv`: 350,164 rows, UTF-8. `na_flag` 75 rows; `dupe_flag` 14,779 rows.
+Expenditures dated 2022 or earlier that were filed or amended after May 2023 are in neither file.

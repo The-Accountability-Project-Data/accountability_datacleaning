@@ -887,3 +887,33 @@ The following table describes the variables in our final exported file:
 | `zip_clean`     | `character` | Normalized 5-digit ZIP code            |
 | `state_clean`   | `character` | Normalized 2-letter state abbreviation |
 | `city_clean`    | `character` | Normalized city name                   |
+
+## Update: November 2026
+
+The data was rebuilt for 1998 through 2026 into one file, `in_contribs_1998-2026.csv`, which replaces
+`in_contribs_clean.csv` and `in_contribs_clean_2020-2022.csv`. The code is in `state/in/code/`: `reparse.py`,
+`in_common.R` and `in_contribs.R`.
+
+**Source.** The yearly contribution files for 2000 through 2026 from the
+[download page](https://campaignfinance.in.gov/PublicSite/Reporting/DataDownload.aspx),
+`https://campaignfinance.in.gov/PublicSite/Docs/BulkDataDownloads/<YEAR>_ContributionData.csv.zip`, from the extract of
+November 13, 2026, retrieved November 15, 2026. Each file holds the contributions filed that year. The state no longer
+publishes 1998 and 1999, so the 23,443 rows of the earlier file dated 1998-1999 are included as they were published.
+
+**Reading.** Every field is quoted and quotes inside a field are not escaped; some fields contain line breaks. Each
+file is split on the record end (`"\r\n"`) and the field separator (`","`), which gives the header's 17 fields for
+every record. Quotes inside fields are kept as published (6,276 rows). Files that are not valid UTF-8 (21 of 27) are
+read as windows-1252. 2,340,012 rows.
+
+**Amended.** All rows are kept, including the 203,940 with `Amended` = 1. The files have no report or transaction ID,
+so an amended item cannot be linked to the item it replaced; `amended` is kept as a flag.
+
+**Columns.** The 24 columns of the earlier files, in the same order. As above: `na_flag` on `committee`, `name`,
+`amount` and `date` (61,172 rows); `dupe_flag` on every column, all copies flagged (49,093 rows); `year` from `date`,
+limited to 1998-2026; addresses, ZIP codes, states and cities normalized. The city is swapped with the ZIP code's city
+when it is an abbreviation of it or within two edits; when the ZIP code has no match the normalized city is kept.
+
+**Result.** 2,363,455 rows, 534 MB, UTF-8. Compared with the earlier files: the counts by year for 2000-2018 are within
+a few percent; 2019 (40,740 rows before, 70,781 now) and 2021-2026 are completed or new. Rows of the earlier files that are not in the new file are mostly extra copies of
+the same contribution in the two 2020 files (20,773 of the 20,803 missing 2020-2021 rows match a contribution in the
+new file) and 4,205 rows with a blank or out-of-range date (the new files have none).

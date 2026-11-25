@@ -800,3 +800,33 @@ The following table describes the variables in our final exported file:
 | `address_clean`  | `character` |            |
 | `city_clean`     | `character` |            |
 | `zip_clean`      | `character` |            |
+
+## Update: November 2026
+
+The data was rebuilt for the whole history into `ks_expends_2009-2026.csv`, which replaces
+`ks_expends_20050318-20220101.csv`.
+
+**Source.** The Kansas Secretary of State's [campaign finance viewer](https://kssos.org/elections/cfr_viewer/cfr_examiner_expenditure.aspx),
+the same search used above, covers expenditures by statewide candidates. On November 20, 2026, the search was run for
+1900-2004 together and then for each calendar year from 2005 to 2026, and each result was exported ("CLICK HERE TO
+EXPORT THE RESULTS", an HTML table saved as `.xls`). Every export had as many rows as the search's "N record(s)
+found".
+
+**Reading.** `state/ks/code/reparse.py` takes each value from its labeled field in the export. The expenditure export
+uses the contribution export's labels: the payee is in the contributor field and becomes `recipient`, and the
+expenditure description is in the tender type field and becomes `typeof_expense`. Every column is read as text and an
+empty field is read as missing; line breaks inside a field become a space. Letter case and everything else are kept
+as published. Amounts become numbers and dates are written as YYYY-MM-DD. The code is in `state/ks/code/`:
+`reparse.py`, `ks_common.R`, `ks_expends.R`.
+
+**Columns.** The 18 columns of the earlier build in its order, then `state_clean`: `cand_name`, `recipient`,
+`address`, `address2`, `city`, `state`, `zip`, `date`, `typeof_expense`, `amount`, `start_date`, `end_date`,
+`na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `zip_clean`, `state_clean`.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `recipient` and `cand_name`. `dupe_flag` on every source column, all
+copies flagged. `year` from `date`. Address, ZIP code, state and city normalized; the city is swapped with the ZIP
+code's city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code
+are a valid combination.
+
+**Result.** 38,477 expenditures, 2005-03-18 to 2026-10-28, 19 columns, UTF-8. `na_flag` 1 row; `dupe_flag` 1,268
+rows.

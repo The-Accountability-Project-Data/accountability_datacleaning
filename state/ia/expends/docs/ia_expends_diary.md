@@ -628,3 +628,34 @@ ia %>%
     na = ""
   )
 ```
+
+## Update: November 2026
+
+The data was rebuilt into `ia_expends_2002-2026.csv`, which replaces `ia_expends_clean.csv`.
+
+**Source.** The Iowa Ethics and Campaign Disclosure Board's datasets moved from the Socrata portal used above (whose
+dataset pages now return "not found") to the Iowa Data Hub: dataset 917, "Iowa Campaign Contributions Received", and
+918, "Iowa Campaign Expenditures", both updated November 21, 2026. Each was downloaded on November 22, 2026 from
+`https://idh-be.iowa.gov/api/v1/datasets/<id>/rows.csv`, which returns a zip (917 holds four CSV parts). Every year has at least as
+many records as the earlier build, so the new file replaces it. The Board's data may not be used for commercial
+purposes (Iowa Code section 68B.32A(7)).
+
+**Reading.** Every column is read as text and an empty field is read as missing. Letter case and everything else are
+kept as published. Dates are already YYYY-MM-DD; amounts become numbers. Rows with no date and no committee are left
+out: they are pieces of records split in the source, with their values in the wrong columns.
+
+**Rows.** Expenditures (EXP) and loan repayments (LOANREP): 678,913 rows read; 19 pieces of split records left out.
+
+**Columns.** The source's: `date` (calendar_date), `transaction_type`, `committee_cd`, `committee_type`,
+`committee_nm`, `organization_nm`, `first_nm`, `last_nm`, `address_line_1`, `address_line_2`, `city`, `state`
+(state_cd), `zip_code`, `amount`, `check_number`, `rec_committee_cd` (a receiving committee's code); then `payee_name`
+(the organization, or "LAST, FIRST"), `na_flag`, `dupe_flag`, `year`, `address_clean`, `city_clean`, `state_clean`,
+`zip_clean`.
+
+**Cleaning.** `na_flag` on `date`, `amount`, `payee_name` and `committee_nm`. `dupe_flag` on every column, all copies
+flagged. `year` from `date`. Address, ZIP code, state and city normalized; the city is swapped with the ZIP code's
+city when it is an abbreviation of it or one edit away, then refined where the refined city, state and ZIP code are
+a valid combination. The code is in `state/ia/code/`: `ia_common.R`, `ia_expends.R`.
+
+**Result.** 678,894 expenditures, 1960-08-29 to 2026-11-19, 24 columns, UTF-8. `na_flag` 45 rows; `dupe_flag` 11,476
+rows.
